@@ -12,6 +12,35 @@ const DEFAULT_CATEGORIES = [
   { code: 'AGBADJA', name: 'AGBADJA', label: { fr: 'Billet VIP', en: 'VIP ticket' }, price: 550, capacity: 20, order: 2 },
 ];
 
+// Menu par defaut (modifiable ensuite dans l'admin)
+const d = (fr, en, dfr = '', den = '', tiers = ['ZINLI', 'AGBADJA']) => ({ name: { fr, en }, desc: { fr: dfr, en: den }, tiers });
+const DEFAULT_MENU = [
+  { key: 'entrees', items: [
+    d('Samoussa au bœuf', 'Beef samosa', 'Croustillant et savoureux', 'Crispy and tasty'),
+    d('Accras de morue', 'Cod fritters', 'Recette traditionnelle', 'Traditional recipe'),
+    d('Salade exotique', 'Exotic salad', 'Fraîche et colorée', 'Fresh and colourful'),
+    d('Brochettes de gambas', 'Prawn skewers', 'Marinées aux épices douces', 'Marinated in mild spices', ['AGBADJA']),
+  ] },
+  { key: 'plats', items: [
+    d('Poulet braisé', 'Grilled chicken', 'À la sauce épicée', 'With spicy sauce'),
+    d('Poisson braisé', 'Grilled fish', 'Aux épices douces', 'With mild spices'),
+    d('Riz gras', 'Jollof rice', 'Saveurs authentiques', 'Authentic flavours'),
+    d('Agneau mijoté', 'Slow-cooked lamb', 'Sauce arachide', 'Peanut sauce', ['AGBADJA']),
+  ] },
+  { key: 'desserts', items: [
+    d('Tarte à la mangue', 'Mango tart', 'Fruitée et gourmande', 'Fruity and indulgent'),
+    d('Beignets sucrés', 'Sweet doughnuts', 'Douceur africaine', 'African sweetness'),
+    d('Banane plantain', 'Plantain', 'Caramélisée', 'Caramelised'),
+  ] },
+  { key: 'boissons', items: [
+    d('Jus de bissap', 'Hibiscus juice', 'Naturel', 'Natural'),
+    d('Jus de gingembre', 'Ginger juice', 'Rafraîchissant', 'Refreshing'),
+    d('Eau minérale', 'Mineral water', 'Fraîche et pure', 'Fresh and pure'),
+    d('Cocktail de fruits', 'Fruit cocktail', 'Sans alcool', 'Alcohol free', ['AGBADJA']),
+  ] },
+];
+const MENU_SECTIONS = ['entrees', 'plats', 'desserts', 'boissons'];
+
 // ─── Evenement ───────────────────────────────────────────────────────────────
 
 async function getEvent() {
@@ -23,6 +52,9 @@ async function getEvent() {
       if (err.code !== 11000) throw err;
       ev = await TicketEvent.findOne({ slug: SLUG });
     }
+  }
+  if (!ev.menu || ev.menu.length === 0) {
+    ev = await TicketEvent.findByIdAndUpdate(ev._id, { menu: DEFAULT_MENU }, { new: true });
   }
   const count = await TicketCategory.countDocuments({ event: ev._id });
   if (count === 0) {
@@ -56,6 +88,7 @@ function publicEvent(ev) {
     venue: ev.venue,
     venueAddress: ev.venueAddress,
     menuFinal: ev.menuFinal,
+    menu: (ev.menu || []).map((s) => ({ key: s.key, items: (s.items || []).map((i) => ({ name: i.name, desc: i.desc, tiers: i.tiers })) })),
     maxTicketsPerOrder: ev.maxTicketsPerOrder,
     contactEmail: ev.contactEmail,
     contactPhone: ev.contactPhone,
@@ -266,6 +299,7 @@ async function cancelOrderTickets(orderId) {
 
 module.exports = {
   SLUG,
+  MENU_SECTIONS,
   HOLD_MINUTES,
   getEvent,
   salesState,

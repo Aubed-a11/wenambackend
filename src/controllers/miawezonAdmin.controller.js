@@ -67,6 +67,35 @@ exports.updateEvent = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// Menu du buffet : remplace le menu complet
+exports.updateMenu = async (req, res, next) => {
+  try {
+    const ev = await svc.getEvent();
+    const input = Array.isArray(req.body?.menu) ? req.body.menu : null;
+    if (!input) return res.status(400).json({ message: 'Menu manquant' });
+    const cats = await svc.getCategories(ev._id);
+    const codes = cats.map((c) => c.code);
+    const txt = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+    const menu = svc.MENU_SECTIONS.map((key) => {
+      const sec = input.find((s) => s && s.key === key) || { items: [] };
+      const items = (Array.isArray(sec.items) ? sec.items : []).slice(0, 40).map((i) => ({
+        name: { fr: txt(i?.name?.fr, 90), en: txt(i?.name?.en, 90) },
+        desc: { fr: txt(i?.desc?.fr, 140), en: txt(i?.desc?.en, 140) },
+        tiers: (Array.isArray(i?.tiers) ? i.tiers : []).map(String).filter((c) => codes.includes(c)),
+      })).filter((i) => i.name.fr);
+      return { key, items };
+    });
+    for (const s of menu) {
+      const empty = s.items.find((i) => i.tiers.length === 0);
+      if (empty) return res.status(400).json({ message: `« ${empty.name.fr} » doit être servi dans au moins un menu` });
+    }
+    const set = { menu };
+    if (typeof req.body.menuFinal === 'boolean') set.menuFinal = req.body.menuFinal;
+    const updated = await TicketEvent.findByIdAndUpdate(ev._id, set, { new: true });
+    res.json({ event: svc.publicEvent(updated) });
+  } catch (err) { next(err); }
+};
+
 exports.updateCategory = async (req, res, next) => {
   try {
     const c = await TicketCategory.findById(req.params.id);

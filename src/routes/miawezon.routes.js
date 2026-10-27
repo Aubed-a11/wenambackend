@@ -23,6 +23,7 @@ router.post('/webhook/kkiapay', pub.kkiapayWebhook);
 const a = [verifyToken, isAdmin];
 router.get('/admin/config', a, admin.getConfig);
 router.put('/admin/event', a, admin.updateEvent);
+router.put('/admin/menu', a, admin.updateMenu);
 router.put('/admin/categories/:id', a, admin.updateCategory);
 router.get('/admin/stats', a, admin.getStats);
 router.get('/admin/orders', a, admin.listOrders);

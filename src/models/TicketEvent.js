@@ -30,6 +30,22 @@ const ticketEventSchema = new mongoose.Schema({
   // Le menu definitif du buffet a ete transmis (sinon "Menu bientot disponible")
   menuFinal: { type: Boolean, default: false },
 
+  // Menu du buffet, modifiable dans l'admin.
+  // tiers : menus ou le plat est servi (ZINLI, AGBADJA)
+  menu: {
+    type: [{
+      _id: false,
+      key: { type: String, required: true },
+      items: [{
+        _id: false,
+        name: { fr: { type: String, default: '' }, en: { type: String, default: '' } },
+        desc: { fr: { type: String, default: '' }, en: { type: String, default: '' } },
+        tiers: { type: [String], default: ['ZINLI', 'AGBADJA'] },
+      }],
+    }],
+    default: undefined,
+  },
+
   maxTicketsPerOrder: { type: Number, default: 10, min: 1, max: 50 },
   contactEmail: { type: String, default: '' },
   contactPhone: { type: String, default: '' },
