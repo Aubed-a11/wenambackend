@@ -25,7 +25,7 @@ const ticketOrderSchema = new mongoose.Schema({
   holders: [{ type: String, trim: true }],
   quantity: { type: Number, required: true },
   total: { type: Number, required: true },
-  currency: { type: String, default: 'XOF' },
+  currency: { type: String, default: 'MAD' },
 
   // pending  : places bloquees, en attente de paiement
   // paid     : paye, billets emis

@@ -52,7 +52,7 @@ Au premier démarrage, le serveur crée la configuration MIAWÉZON avec :
 
 - rubrique **masquée** du public (seuls les admins la voient, avec un bandeau « Aperçu »)
 - ouverture de la billetterie le 1er avril 2027 à 00h00
-- ZINLI 15 000 FCFA, 50 places ; AGBADJA 35 000 FCFA, 20 places
+- ZINLI 250 MAD, 50 places ; AGBADJA 550 MAD, 20 places (valeurs d'exemple, à régler dans l'admin)
 
 Tout se règle dans **Admin > MIAWÉZON > Réglages** :
 
@@ -65,7 +65,7 @@ La billetterie s'ouvre toute seule à la date prévue (mode « Automatique »). 
 
 ## 4. Contenus et images
 
-Textes, menu du buffet, prestations des billets, galerie : `src/data/miawezon.js` (front).
+Textes, menus ZINLI et AGBADJA (cartes sans photos, un plat marqué `only: 'AGBADJA'` n'apparaît que dans ce menu), prestations des billets, galerie : `src/data/miawezon.js` (front).
 
 Images provisoires dans `public/images/miawezon/`, à remplacer en gardant les mêmes noms :
 
@@ -73,7 +73,6 @@ Images provisoires dans `public/images/miawezon/`, à remplacer en gardant les m
 - `hero.jpg` (fond de la page événement, format large)
 - `banniere-accueil.jpg` (bannière de la page d'accueil)
 - `concept.jpg`, `galerie-1.jpg` à `galerie-5.jpg`
-- `menu/*.jpg` (une photo par plat)
 
 Remplacer aussi `src/assets/miawezon-logo.png` côté backend (logo imprimé sur les billets PDF).
 

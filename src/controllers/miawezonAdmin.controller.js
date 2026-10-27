@@ -74,7 +74,7 @@ exports.updateCategory = async (req, res, next) => {
     const b = req.body || {};
     if ('price' in b) {
       const p = Number(b.price);
-      if (!(p >= 100)) return res.status(400).json({ message: 'Prix invalide (minimum 100 FCFA)' });
+      if (!(p >= 10)) return res.status(400).json({ message: 'Prix invalide (minimum 10 MAD)' });
       c.price = Math.round(p);
     }
     if ('capacity' in b) {

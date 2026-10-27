@@ -8,8 +8,8 @@ const SLUG = 'miawezon';
 const HOLD_MINUTES = Number(process.env.MIAWEZON_HOLD_MINUTES || 20);
 
 const DEFAULT_CATEGORIES = [
-  { code: 'ZINLI', name: 'ZINLI', label: { fr: 'Billet Basique', en: 'Basic ticket' }, price: 15000, capacity: 50, order: 1 },
-  { code: 'AGBADJA', name: 'AGBADJA', label: { fr: 'Billet VIP', en: 'VIP ticket' }, price: 35000, capacity: 20, order: 2 },
+  { code: 'ZINLI', name: 'ZINLI', label: { fr: 'Billet Basique', en: 'Basic ticket' }, price: 250, capacity: 50, order: 1 },
+  { code: 'AGBADJA', name: 'AGBADJA', label: { fr: 'Billet VIP', en: 'VIP ticket' }, price: 550, capacity: 20, order: 2 },
 ];
 
 // ─── Evenement ───────────────────────────────────────────────────────────────

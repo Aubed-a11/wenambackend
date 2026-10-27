@@ -52,12 +52,12 @@ const M = {
 function layout(inner) {
   return `
   <div style="font-family:Lato,Arial,sans-serif;max-width:560px;margin:0 auto;background:#FAF3E8;border-radius:16px;overflow:hidden;color:#1A0F00">
-    <div style="background:#1E120A;padding:28px 32px;text-align:center;border-bottom:4px solid #D9A441">
-      <p style="font-family:Georgia,serif;font-size:30px;font-weight:700;color:#D9A441;margin:0;letter-spacing:1px">MIAWÉZON</p>
+    <div style="background:#8B3A0F;padding:28px 32px;text-align:center;border-bottom:4px solid #C4531A">
+      <p style="font-family:Georgia,serif;font-size:30px;font-weight:700;color:#FAF3E8;margin:0;letter-spacing:1px">MIAWÉZON</p>
       <p style="font-family:Georgia,serif;font-size:13px;font-style:italic;color:#F3E3C3;margin:6px 0 0">Wênam</p>
     </div>
     <div style="padding:32px">${inner}</div>
-    <div style="background:#3B2314;padding:14px 32px;text-align:center">
+    <div style="background:#6B2C0B;padding:14px 32px;text-align:center">
       <a href="${frontUrl()}" style="color:#F3E3C3;font-size:12px;text-decoration:none">wenamfood.com</a>
     </div>
   </div>`;

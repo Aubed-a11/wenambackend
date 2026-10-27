@@ -5,10 +5,11 @@ const PDFDocument = require('pdfkit');
 
 const LOGO = path.join(__dirname, '../assets/miawezon-logo.png');
 
+// Charte Wenam
 const C = {
-  dark: '#1E120A',
-  brown: '#3B2314',
-  gold: '#D9A441',
+  dark: '#8B3A0F',
+  brown: '#6B2C0B',
+  gold: '#FAF3E8',
   orange: '#C4531A',
   cream: '#FAF3E8',
   text: '#1A0F00',
@@ -24,7 +25,7 @@ const qrDataUrl = (ticket) =>
 const qrBuffer = (ticket) =>
   QRCode.toBuffer(qrPayload(ticket), { errorCorrectionLevel: 'M', margin: 1, width: 480, color: { dark: '#1A0F00', light: '#FFFFFF' } });
 
-const fmtPrice = (n) => `${Number(n || 0).toLocaleString('fr-FR').replace(/ | /g, ' ')} FCFA`;
+const fmtPrice = (n) => `${Number(n || 0).toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ')} MAD`;
 
 function labelOr(obj, lang, fallback) {
   const v = obj?.[lang] || obj?.fr;
@@ -94,7 +95,7 @@ async function ticketsPdf({ order, tickets, event }) {
 
     // En-tete sombre
     doc.rect(0, 0, W, 150).fill(C.dark);
-    doc.rect(0, 150, W, 4).fill(C.gold);
+    doc.rect(0, 150, W, 4).fill(C.orange);
     if (hasLogo) {
       try { doc.image(LOGO, 28, 30, { fit: [86, 86] }); } catch { /* image illisible */ }
     }
