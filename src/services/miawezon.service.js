@@ -211,35 +211,53 @@ async function createOrder({ ev, items, buyer, holders, lang, userId }) {
 
 const ticketCode = () => crypto.randomBytes(9).toString('base64url').toUpperCase().replace(/[^A-Z0-9]/g, 'X');
 
+// Prefixe du numero de billet par categorie (ZN-000123, AG-000045)
+const NUMBER_PREFIX = { ZINLI: 'ZN', AGBADJA: 'AG' };
+const numberPrefix = (code) => NUMBER_PREFIX[code] || String(code || 'MZ').slice(0, 2).toUpperCase();
+
 // Emet les billets d'une commande payee (idempotent)
 async function issueTickets(order) {
   const existing = await Ticket.countDocuments({ order: order._id });
-  if (existing > 0) return Ticket.find({ order: order._id }).sort({ number: 1 });
+  if (existing > 0) return Ticket.find({ order: order._id }).sort({ _id: 1 });
 
-  const docs = [];
-  let idx = 0;
-  for (const it of order.items) {
-    for (let k = 0; k < it.quantity; k++) {
-      const holder = (order.holders?.[idx] || '').trim() || order.buyer.name;
-      idx += 1;
-      docs.push({
-        event: order.event,
-        order: order._id,
-        category: it.category,
-        categoryCode: it.code,
-        categoryName: it.name,
-        number: `${order.orderNumber}-${idx}`,
-        code: ticketCode(),
-        holderName: holder,
-      });
+  for (let attempt = 0; attempt < 6; attempt++) {
+    // Prochain numero libre par categorie
+    const next = {};
+    for (const it of order.items) {
+      if (next[it.code] != null) continue;
+      const prefix = numberPrefix(it.code);
+      const last = await Ticket.findOne({ event: order.event, number: new RegExp(`^${prefix}-\\d+$`) }).sort({ number: -1 }).select('number');
+      next[it.code] = last ? parseInt(last.number.split('-')[1], 10) + 1 + attempt : 1 + attempt;
+    }
+
+    const docs = [];
+    let idx = 0;
+    for (const it of order.items) {
+      for (let k = 0; k < it.quantity; k++) {
+        const holder = (order.holders?.[idx] || '').trim() || order.buyer.name;
+        idx += 1;
+        docs.push({
+          event: order.event,
+          order: order._id,
+          category: it.category,
+          categoryCode: it.code,
+          categoryName: it.name,
+          number: `${numberPrefix(it.code)}-${String(next[it.code]++).padStart(6, '0')}`,
+          code: ticketCode(),
+          holderName: holder,
+        });
+      }
+    }
+    try {
+      await Ticket.insertMany(docs, { ordered: true });
+      break;
+    } catch (err) {
+      // Numero pris par une emission concurrente : on retire ce lot et on recommence
+      await Ticket.deleteMany({ order: order._id });
+      if (err.code !== 11000 || attempt === 5) throw err;
     }
   }
-  try {
-    await Ticket.insertMany(docs, { ordered: true });
-  } catch (err) {
-    if (err.code !== 11000) throw err;
-  }
-  return Ticket.find({ order: order._id }).sort({ number: 1 });
+  return Ticket.find({ order: order._id }).sort({ _id: 1 });
 }
 
 async function cancelOrderTickets(orderId) {

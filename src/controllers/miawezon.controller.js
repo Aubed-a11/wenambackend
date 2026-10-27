@@ -33,7 +33,7 @@ function emitSale(order) {
 
 async function orderPayload(order, { withQr = true } = {}) {
   const tickets = order.status === 'paid' || order.status === 'cancelled'
-    ? await Ticket.find({ order: order._id }).sort({ number: 1 })
+    ? await Ticket.find({ order: order._id }).sort({ _id: 1 })
     : [];
   const list = await Promise.all(tickets.map(async (t) => ({
     _id: t._id,
@@ -266,7 +266,7 @@ exports.downloadPdf = async (req, res, next) => {
   try {
     const { order } = await loadOrderWithToken(req);
     if (order.status !== 'paid') return res.status(409).json({ message: 'Billets non disponibles', code: 'NOT_PAID' });
-    const tickets = await Ticket.find({ order: order._id, status: { $ne: 'cancelled' } }).sort({ number: 1 });
+    const tickets = await Ticket.find({ order: order._id, status: { $ne: 'cancelled' } }).sort({ _id: 1 });
     const ev = await svc.getEvent();
     const pdf = await ticketsPdf({ order, tickets, event: ev });
     res.setHeader('Content-Type', 'application/pdf');

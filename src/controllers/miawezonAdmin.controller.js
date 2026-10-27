@@ -201,7 +201,7 @@ exports.exportOrders = async (req, res, next) => {
   try {
     const ev = await svc.getEvent();
     const orders = await TicketOrder.find(orderFilter(ev, { status: req.query.status || 'paid', search: req.query.search })).sort({ createdAt: 1 });
-    const tickets = await Ticket.find({ order: { $in: orders.map((o) => o._id) } }).sort({ number: 1 });
+    const tickets = await Ticket.find({ order: { $in: orders.map((o) => o._id) } }).sort({ _id: 1 });
     const byOrder = new Map();
     for (const t of tickets) {
       const k = String(t.order);
@@ -235,7 +235,7 @@ exports.resendEmail = async (req, res, next) => {
       o.buyer.email = email;
       await TicketOrder.updateOne({ _id: o._id }, { 'buyer.email': email });
     }
-    const tickets = await Ticket.find({ order: o._id, status: { $ne: 'cancelled' } }).sort({ number: 1 });
+    const tickets = await Ticket.find({ order: o._id, status: { $ne: 'cancelled' } }).sort({ _id: 1 });
     const ev = await svc.getEvent();
     const sent = await sendTicketsEmail({ order: o, tickets, event: ev, token: o.accessToken });
     if (!sent) return res.status(503).json({ message: 'Le serveur d\'e-mail n\'est pas configuré' });
