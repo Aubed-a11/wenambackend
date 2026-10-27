@@ -8,7 +8,12 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 initSocket(server);
 
-connectDB().then(() => {
+connectDB().then(async () => {
+  // MIAWEZON : cree la configuration par defaut et libere les reservations expirees
+  const miawezon = require('./services/miawezon.service');
+  await miawezon.getEvent().catch((e) => console.error('MIAWEZON init:', e.message));
+  miawezon.startSweeper();
+
   server.listen(PORT, () => {
     console.log(`🚀 Wénam Server démarré sur http://localhost:${PORT}`);
     console.log(`📡 Socket.io prêt`);
