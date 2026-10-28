@@ -41,6 +41,15 @@ const DEFAULT_MENU = [
 ];
 const MENU_SECTIONS = ['entrees', 'plats', 'desserts', 'boissons'];
 
+// Comptes de virement par defaut (appliques tant qu'aucun RIB n'est saisi dans l'admin)
+const BANK_HOLDER = 'AHOUEFA SAMUELLE RONALDA KAKPO';
+const DEFAULT_BANK_ACCOUNTS = [
+  { bank: 'Bank of Africa', holder: BANK_HOLDER, rib: '011810000022200000256524', iban: 'MA64 0118 1000 0022 2000 0025 6524', swift: 'BMCEMAMC' },
+  { bank: 'CIH Bank', holder: BANK_HOLDER, rib: '230810455122921100810071', iban: 'MA64 2308 1045 5122 9211 0081 0071', swift: 'CIHMMAMC' },
+];
+// Anciens prix par defaut (en centimes) a corriger en DH
+const OLD_PRICES = { ZINLI: [15000, 350], AGBADJA: [35000, 500] };
+
 // ─── Evenement ───────────────────────────────────────────────────────────────
 
 async function getEvent() {
@@ -55,6 +64,12 @@ async function getEvent() {
   }
   if (!ev.menu || ev.menu.length === 0) {
     ev = await TicketEvent.findByIdAndUpdate(ev._id, { menu: DEFAULT_MENU }, { new: true });
+  }
+  if (!(ev.bankAccounts || []).some((b) => b && (b.rib || b.iban))) {
+    ev = await TicketEvent.findByIdAndUpdate(ev._id, { bankAccounts: DEFAULT_BANK_ACCOUNTS }, { new: true });
+  }
+  for (const [code, [oldPrice, price]] of Object.entries(OLD_PRICES)) {
+    await TicketCategory.updateOne({ event: ev._id, code, price: oldPrice }, { $set: { price } });
   }
   const count = await TicketCategory.countDocuments({ event: ev._id });
   if (count === 0) {
