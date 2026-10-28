@@ -35,7 +35,9 @@ const ticketOrderSchema = new mongoose.Schema({
   // refund_needed : paye mais plus de place (paiement arrive apres expiration)
   status: {
     type: String,
-    enum: ['pending', 'paid', 'failed', 'expired', 'cancelled', 'refund_needed'],
+    // awaiting_validation : reçu de virement envoye, en attente de validation par l'admin
+    // rejected : reçu refuse par l'admin, places liberees
+    enum: ['pending', 'awaiting_validation', 'paid', 'rejected', 'failed', 'expired', 'cancelled', 'refund_needed'],
     default: 'pending',
     index: true,
   },
@@ -51,6 +53,19 @@ const ticketOrderSchema = new mongoose.Schema({
     paidAt: Date,
     raw: { type: mongoose.Schema.Types.Mixed, select: false },
   },
+
+  // Paiement par virement : reçu envoye par le client
+  proof: {
+    file: { type: String, default: null, select: false },
+    originalName: String,
+    mime: String,
+    size: Number,
+    reference: { type: String, default: '' },
+    uploadedAt: Date,
+  },
+  validatedAt: Date,
+  validatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  rejectionReason: { type: String, default: '' },
 
   emailSentAt: Date,
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

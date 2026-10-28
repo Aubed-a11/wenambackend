@@ -6,7 +6,9 @@ const TicketWaitlist = require('../models/TicketWaitlist');
 const svc = require('../services/miawezon.service');
 const ycp = require('../services/youcanpay');
 const { sendTicketsEmail, sendWaitlistEmail } = require('../services/ticketMail');
-const { finalizePayment, orderPayload } = require('./miawezon.controller');
+const fs = require('fs');
+const { finalizePayment, orderPayload, approveTransfer, PROOF_PATH } = require('./miawezon.controller');
+const { sendRejected } = require('../services/ticketMail');
 
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const csvCell = (v) => {
@@ -57,6 +59,20 @@ exports.updateEvent = async (req, res, next) => {
     }
     for (const k of ['eventDateLabel', 'eventTimeLabel', 'venue']) if (k in b) set[k] = bi(b[k]);
     for (const k of ['venueAddress', 'contactEmail', 'contactPhone']) if (k in b) set[k] = String(b[k] || '').trim().slice(0, 200);
+    if (['transfer', 'youcanpay'].includes(b.paymentMode)) set.paymentMode = b.paymentMode;
+    for (const k of ['proofDeadlineHours', 'validationHours']) {
+      if (k in b) {
+        const n = parseInt(b[k], 10);
+        if (!(n >= 1 && n <= 168)) return res.status(400).json({ message: 'Les délais doivent être entre 1 et 168 heures' });
+        set[k] = n;
+      }
+    }
+    if (Array.isArray(b.bankAccounts)) {
+      const txt = (v, max) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+      set.bankAccounts = b.bankAccounts.slice(0, 4).map((x) => ({
+        bank: txt(x?.bank, 80), holder: txt(x?.holder, 100), rib: txt(x?.rib, 40), iban: txt(x?.iban, 40), swift: txt(x?.swift, 15),
+      }));
+    }
     if ('maxTicketsPerOrder' in b) {
       const n = parseInt(b.maxTicketsPerOrder, 10);
       if (!(n >= 1 && n <= 50)) return res.status(400).json({ message: 'Maximum par commande entre 1 et 50' });
@@ -138,7 +154,7 @@ exports.getStats = async (req, res, next) => {
       Ticket.aggregate([{ $match: { event: ev._id, status: { $ne: 'cancelled' } } }, { $group: { _id: '$category', n: { $sum: 1 } } }]),
       Ticket.aggregate([{ $match: { event: ev._id, status: 'used' } }, { $group: { _id: '$category', n: { $sum: 1 } } }]),
       TicketOrder.find({ event: ev._id, status: 'paid', 'payment.paidAt': { $gte: new Date(Date.now() - 30 * 86400000) } }).select('payment.paidAt total quantity'),
-      TicketOrder.find({ event: ev._id, status: { $in: ['paid', 'refund_needed'] } }).sort({ updatedAt: -1 }).limit(8),
+      TicketOrder.find({ event: ev._id, status: { $in: ['paid', 'awaiting_validation', 'refund_needed'] } }).sort({ updatedAt: -1 }).limit(8),
       TicketWaitlist.countDocuments({ event: ev._id }),
     ]);
 
@@ -211,6 +227,7 @@ exports.listOrders = async (req, res, next) => {
         _id: o._id, orderNumber: o.orderNumber, buyer: o.buyer, items: o.items, quantity: o.quantity, total: o.total,
         status: o.status, createdAt: o.createdAt, paidAt: o.payment?.paidAt, transactionId: o.payment?.transactionId,
         method: o.payment?.method, emailSentAt: o.emailSentAt, expiresAt: o.expiresAt,
+        proofUploadedAt: o.proof?.uploadedAt || null,
       })),
       total, page, pages: Math.max(1, Math.ceil(total / limit)),
     });
@@ -222,7 +239,15 @@ exports.getOrder = async (req, res, next) => {
     const o = await TicketOrder.findById(req.params.id);
     if (!o) return res.status(404).json({ message: 'Commande introuvable' });
     const payload = await orderPayload(o, { withQr: false });
-    res.json({ order: { ...payload, payment: { transactionId: o.payment?.transactionId, method: o.payment?.method, amount: o.payment?.amount }, emailSentAt: o.emailSentAt, holders: o.holders } });
+    res.json({ order: {
+      ...payload,
+      payment: { transactionId: o.payment?.transactionId, method: o.payment?.method, amount: o.payment?.amount, provider: o.payment?.provider },
+      emailSentAt: o.emailSentAt,
+      holders: o.holders,
+      proof: o.proof?.uploadedAt ? { originalName: o.proof.originalName, mime: o.proof.mime, size: o.proof.size, reference: o.proof.reference, uploadedAt: o.proof.uploadedAt } : null,
+      validatedAt: o.validatedAt,
+      rejectionReason: o.rejectionReason,
+    } });
   } catch (err) { next(err); }
 };
 
@@ -302,7 +327,7 @@ exports.cancelOrder = async (req, res, next) => {
   try {
     const o = await TicketOrder.findById(req.params.id);
     if (!o) return res.status(404).json({ message: 'Commande introuvable' });
-    if (!['paid', 'pending', 'refund_needed'].includes(o.status)) return res.status(409).json({ message: 'Commande déjà clôturée' });
+    if (!['paid', 'pending', 'awaiting_validation', 'refund_needed'].includes(o.status)) return res.status(409).json({ message: 'Commande déjà clôturée' });
     const used = await Ticket.countDocuments({ order: o._id, status: 'used' });
     if (used > 0) return res.status(409).json({ message: 'Impossible : au moins un billet a déjà été scanné à l\'entrée' });
     const updated = await svc.transitionOrder({ _id: o._id, status: o.status }, { status: 'cancelled', seatsHeld: false });
@@ -310,6 +335,61 @@ exports.cancelOrder = async (req, res, next) => {
     if (o.seatsHeld) await svc.releaseSeats(o.items);
     await svc.cancelOrderTickets(o._id);
     res.json({ message: o.status === 'pending' ? 'Commande annulée' : 'Commande annulée. Pensez à rembourser le client depuis YouCan Pay.' });
+  } catch (err) { next(err); }
+};
+
+// ─── Virements : reçus a valider ────────────────────────────────────────────
+
+exports.pendingCount = async (req, res, next) => {
+  try {
+    const ev = await svc.getEvent();
+    const [awaiting, oldest] = await Promise.all([
+      TicketOrder.countDocuments({ event: ev._id, status: 'awaiting_validation' }),
+      TicketOrder.findOne({ event: ev._id, status: 'awaiting_validation' }).sort({ 'proof.uploadedAt': 1 }).select('proof.uploadedAt'),
+    ]);
+    res.json({ awaiting, oldestAt: oldest?.proof?.uploadedAt || null });
+  } catch (err) { next(err); }
+};
+
+exports.getProof = async (req, res, next) => {
+  try {
+    const o = await TicketOrder.findById(req.params.id).select('+proof.file proof orderNumber');
+    if (!o?.proof?.file) return res.status(404).json({ message: 'Aucun reçu pour cette commande' });
+    const file = PROOF_PATH(o.proof.file);
+    if (!fs.existsSync(file)) return res.status(404).json({ message: 'Fichier introuvable sur le serveur' });
+    res.setHeader('Content-Type', o.proof.mime || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline; filename="recu-${o.orderNumber}${require('path').extname(o.proof.file)}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    fs.createReadStream(file).pipe(res);
+  } catch (err) { next(err); }
+};
+
+exports.approveOrder = async (req, res, next) => {
+  try {
+    const o = await TicketOrder.findById(req.params.id).select('+accessToken');
+    if (!o) return res.status(404).json({ message: 'Commande introuvable' });
+    const { order } = await approveTransfer(o, req.user._id);
+    res.json({ message: 'Achat validé : les billets ont été envoyés au client', order: { _id: order._id, status: order.status } });
+  } catch (err) {
+    if (typeof err.code === 'string') return res.status(err.statusCode || 400).json({ message: err.message, code: err.code });
+    next(err);
+  }
+};
+
+exports.rejectOrder = async (req, res, next) => {
+  try {
+    const o = await TicketOrder.findById(req.params.id);
+    if (!o) return res.status(404).json({ message: 'Commande introuvable' });
+    if (!['awaiting_validation', 'pending'].includes(o.status)) return res.status(409).json({ message: 'Cette commande ne peut plus être refusée' });
+    const reason = String(req.body?.reason || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+    const updated = await svc.transitionOrder(
+      { _id: o._id, status: o.status },
+      { status: 'rejected', seatsHeld: false, rejectionReason: reason, validatedAt: new Date(), validatedBy: req.user._id }
+    );
+    if (!updated) return res.status(409).json({ message: 'La commande a changé, rechargez la page' });
+    if (o.seatsHeld) await svc.releaseSeats(o.items);
+    const sent = await sendRejected({ order: updated, reason }).catch(() => false);
+    res.json({ message: sent ? 'Achat refusé : le client a été prévenu par e-mail' : 'Achat refusé (e-mail non envoyé)' });
   } catch (err) { next(err); }
 };
 

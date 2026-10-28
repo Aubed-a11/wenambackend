@@ -168,4 +168,150 @@ async function sendWaitlistEmail({ entry }) {
   return true;
 }
 
-module.exports = { sendTicketsEmail, sendWaitlistEmail, ticketsLink };
+
+// ─── Paiement par virement ──────────────────────────────────────────────────
+
+const V = {
+  fr: {
+    instrSubject: (n) => `MIAWÉZON : finalisez votre réservation ${n}`,
+    instrTitle: 'Votre réservation est enregistrée',
+    instrIntro: 'Merci pour votre réservation ! Pour la finaliser, effectuez un virement du montant exact sur l\'un des comptes ci-dessous, puis envoyez-nous votre reçu depuis le site.',
+    amount: 'Montant à virer',
+    motive: 'Motif du virement',
+    accounts: 'Comptes bancaires',
+    bank: 'Banque', holder: 'Titulaire', rib: 'RIB', iban: 'IBAN', swift: 'SWIFT',
+    deadline: (d) => `Vos places sont réservées jusqu'au ${d}. Passé ce délai, la réservation est annulée.`,
+    upload: 'Envoyer mon reçu de virement',
+    noAccount: 'Les coordonnées bancaires vous seront communiquées très vite.',
+    ackSubject: (n) => `MIAWÉZON : reçu bien reçu (${n})`,
+    ackTitle: 'Nous avons bien reçu votre reçu',
+    ack: (h) => `Merci ! Notre équipe vérifie votre virement. Votre achat sera validé sous ${h} heures au plus, et vous recevrez alors vos billets par e-mail.`,
+    rejSubject: (n) => `MIAWÉZON : paiement non validé (${n})`,
+    rejTitle: 'Votre paiement n\'a pas pu être validé',
+    rej: 'Nous n\'avons pas pu valider le virement correspondant à votre réservation. Les places ont été remises en vente.',
+    reason: 'Motif',
+    rejHelp: 'Si vous pensez qu\'il s\'agit d\'une erreur, répondez simplement à ce courriel avec votre preuve de paiement.',
+  },
+  en: {
+    instrSubject: (n) => `MIAWÉZON: complete your booking ${n}`,
+    instrTitle: 'Your booking is registered',
+    instrIntro: 'Thank you for your booking! To complete it, make a bank transfer of the exact amount to one of the accounts below, then send us your receipt from the website.',
+    amount: 'Amount to transfer',
+    motive: 'Transfer reference',
+    accounts: 'Bank accounts',
+    bank: 'Bank', holder: 'Account holder', rib: 'RIB', iban: 'IBAN', swift: 'SWIFT',
+    deadline: (d) => `Your seats are held until ${d}. After that, the booking is cancelled.`,
+    upload: 'Send my transfer receipt',
+    noAccount: 'Bank details will be shared with you very soon.',
+    ackSubject: (n) => `MIAWÉZON: receipt received (${n})`,
+    ackTitle: 'We have received your receipt',
+    ack: (h) => `Thank you! Our team is checking your transfer. Your purchase will be validated within ${h} hours at most, and you will then receive your tickets by email.`,
+    rejSubject: (n) => `MIAWÉZON: payment not validated (${n})`,
+    rejTitle: 'Your payment could not be validated',
+    rej: 'We could not validate the transfer for your booking. The seats have been released.',
+    reason: 'Reason',
+    rejHelp: 'If you think this is a mistake, simply reply to this email with your proof of payment.',
+  },
+};
+
+const fmtDateTime = (d, lang) => new Date(d).toLocaleString(lang === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Casablanca' });
+const resumeLink = (order, token) => `${frontUrl()}/miawezon/reserver?order=${order._id}&t=${token}`;
+
+function accountsHtml(accounts, v) {
+  if (!accounts.length) return `<p style="font-size:14px;color:#8B6B3D">${v.noAccount}</p>`;
+  return accounts.map((b) => `
+    <div style="background:#fff;border:1px solid #E4D3B5;border-radius:12px;padding:14px 16px;margin:0 0 10px">
+      ${b.bank ? `<p style="margin:0 0 6px;font-weight:700;color:#8B3A0F">${esc(b.bank)}</p>` : ''}
+      ${b.holder ? `<p style="margin:0;font-size:13px;color:#5C3D11">${v.holder} : <strong>${esc(b.holder)}</strong></p>` : ''}
+      ${b.rib ? `<p style="margin:4px 0 0;font-size:13px;color:#5C3D11">${v.rib} : <strong style="font-family:Consolas,monospace;letter-spacing:1px">${esc(b.rib)}</strong></p>` : ''}
+      ${b.iban ? `<p style="margin:4px 0 0;font-size:13px;color:#5C3D11">${v.iban} : <strong style="font-family:Consolas,monospace">${esc(b.iban)}</strong></p>` : ''}
+      ${b.swift ? `<p style="margin:4px 0 0;font-size:13px;color:#5C3D11">${v.swift} : <strong>${esc(b.swift)}</strong></p>` : ''}
+    </div>`).join('');
+}
+
+async function send(to, subject, inner, m, extra = []) {
+  const tr = getTransporter();
+  if (!tr) { console.warn('MIAWEZON: SMTP non configure, courriel non envoye :', subject); return false; }
+  await tr.sendMail({
+    from: `"${fromName()}" <${fromEmail()}>`,
+    replyTo: fromEmail(),
+    to,
+    subject,
+    html: layout(inner, m),
+    attachments: [logoAttachment(), ...extra],
+  });
+  return true;
+}
+
+// Instructions de virement, envoyees juste apres la reservation
+async function sendTransferInstructions({ order, event, token }) {
+  const lang = order.lang === 'en' ? 'en' : 'fr';
+  const m = M[lang]; const v = V[lang];
+  const accounts = (event.bankAccounts || []).filter((b) => b && (b.rib || b.iban));
+  const inner = `
+    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${v.instrTitle}</p>
+    <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 20px">${v.instrIntro}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 18px">
+      <tr><td style="padding:6px 0;color:#5C3D11">${v.amount}</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#C4531A;font-size:18px">${fmtPrice(order.total)}</td></tr>
+      <tr><td style="padding:6px 0;color:#5C3D11">${v.motive}</td><td style="padding:6px 0;text-align:right;font-weight:700;font-family:Consolas,monospace">${esc(order.orderNumber)}</td></tr>
+    </table>
+    <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#8B6B3D;margin:0 0 8px">${v.accounts}</p>
+    ${accountsHtml(accounts, v)}
+    <p style="font-size:13px;line-height:1.6;color:#8B6B3D;margin:16px 0 0">${v.deadline(fmtDateTime(order.expiresAt, lang))}</p>
+    <p style="text-align:center;margin:26px 0">
+      <a href="${resumeLink(order, token)}" style="display:inline-block;background:#C4531A;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${v.upload}</a>
+    </p>
+    <p style="font-size:14px;margin:0">${m.team}</p>`;
+  return send(order.buyer.email, v.instrSubject(order.orderNumber), inner, m);
+}
+
+// Accuse de reception du reçu
+async function sendProofReceived({ order, event }) {
+  const lang = order.lang === 'en' ? 'en' : 'fr';
+  const m = M[lang]; const v = V[lang];
+  const inner = `
+    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${v.ackTitle}</p>
+    <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 20px">${v.ack(event.validationHours || 24)}</p>
+    <p style="font-size:13px;color:#8B6B3D;margin:0 0 20px">${v.motive} : <strong>${esc(order.orderNumber)}</strong> · ${fmtPrice(order.total)}</p>
+    <p style="font-size:14px;margin:0">${m.team}</p>`;
+  return send(order.buyer.email, v.ackSubject(order.orderNumber), inner, m);
+}
+
+// Refus du reçu
+async function sendRejected({ order, reason }) {
+  const lang = order.lang === 'en' ? 'en' : 'fr';
+  const m = M[lang]; const v = V[lang];
+  const inner = `
+    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${v.rejTitle}</p>
+    <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 14px">${v.rej}</p>
+    ${reason ? `<p style="font-size:14px;line-height:1.6;margin:0 0 14px;background:#fff;border:1px solid #E4D3B5;border-radius:10px;padding:12px 14px"><strong>${v.reason} :</strong> ${esc(reason)}</p>` : ''}
+    <p style="font-size:13px;line-height:1.6;color:#8B6B3D;margin:0 0 20px">${v.rejHelp}</p>
+    <p style="font-size:14px;margin:0">${m.team}</p>`;
+  return send(order.buyer.email, v.rejSubject(order.orderNumber), inner, m);
+}
+
+// Alerte a l'equipe : un reçu attend une validation
+async function sendAdminProofNotice({ order, proofPath, proofName, proofMime }) {
+  const to = process.env.MIAWEZON_ADMIN_EMAIL || fromEmail();
+  const m = M.fr;
+  const inner = `
+    <p style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#8B3A0F;margin:0 0 14px">Nouveau reçu de virement à valider</p>
+    <table style="width:100%;font-size:14px;border-collapse:collapse">
+      <tr><td style="padding:4px 0;color:#5C3D11">Commande</td><td style="text-align:right;font-weight:700">${esc(order.orderNumber)}</td></tr>
+      <tr><td style="padding:4px 0;color:#5C3D11">Client</td><td style="text-align:right">${esc(order.buyer.name)}</td></tr>
+      <tr><td style="padding:4px 0;color:#5C3D11">Téléphone</td><td style="text-align:right">${esc(order.buyer.phone)}</td></tr>
+      <tr><td style="padding:4px 0;color:#5C3D11">Billets</td><td style="text-align:right">${order.items.map((i) => `${esc(i.code)} x${i.quantity}`).join(', ')}</td></tr>
+      <tr><td style="padding:4px 0;color:#5C3D11">Montant attendu</td><td style="text-align:right;font-weight:700;color:#C4531A">${fmtPrice(order.total)}</td></tr>
+    </table>
+    <p style="font-size:14px;line-height:1.6;margin:18px 0">Le reçu est joint à ce courriel. Validez ou refusez l'achat depuis le tableau de bord, sous 24 heures.</p>
+    <p style="text-align:center;margin:22px 0">
+      <a href="${frontUrl()}/admin/miawezon?commande=${order._id}" style="display:inline-block;background:#C4531A;color:#fff;padding:12px 26px;border-radius:10px;text-decoration:none;font-weight:700">Ouvrir le tableau de bord</a>
+    </p>`;
+  const extra = proofPath ? [{ filename: proofName || 'recu', path: proofPath, contentType: proofMime }] : [];
+  return send(to, `Reçu à valider : ${order.orderNumber} (${order.buyer.name})`, inner, m, extra);
+}
+
+module.exports = { sendTicketsEmail, sendWaitlistEmail, ticketsLink, sendTransferInstructions, sendProofReceived, sendRejected, sendAdminProofNotice };

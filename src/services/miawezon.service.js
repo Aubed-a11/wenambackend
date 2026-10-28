@@ -90,6 +90,10 @@ function publicEvent(ev) {
     menuFinal: ev.menuFinal,
     menu: (ev.menu || []).map((s) => ({ key: s.key, items: (s.items || []).map((i) => ({ name: i.name, desc: i.desc, tiers: i.tiers })) })),
     maxTicketsPerOrder: ev.maxTicketsPerOrder,
+    paymentMode: ev.paymentMode || 'transfer',
+    bankAccounts: (ev.bankAccounts || []).filter((b) => b && (b.rib || b.iban)).map((b) => ({ bank: b.bank, holder: b.holder, rib: b.rib, iban: b.iban, swift: b.swift })),
+    proofDeadlineHours: ev.proofDeadlineHours || 24,
+    validationHours: ev.validationHours || 24,
     contactEmail: ev.contactEmail,
     contactPhone: ev.contactPhone,
   };
@@ -205,6 +209,9 @@ async function nextOrderNumber(ev) {
   return () => `${prefix}${String(++n).padStart(4, '0')}`;
 }
 
+// Delai de paiement : quelques minutes en ligne, ou le delai d'envoi du reçu pour un virement
+const holdMs = (ev) => (ev.paymentMode === 'youcanpay' ? HOLD_MINUTES * 60 * 1000 : (ev.proofDeadlineHours || 24) * 3600 * 1000);
+
 async function createOrder({ ev, items, buyer, holders, lang, userId }) {
   const blocked = await holdSeats(items);
   if (blocked) {
@@ -227,7 +234,7 @@ async function createOrder({ ev, items, buyer, holders, lang, userId }) {
         items,
         quantity,
         total,
-        expiresAt: new Date(Date.now() + HOLD_MINUTES * 60 * 1000),
+        expiresAt: new Date(Date.now() + holdMs(ev)),
         user: userId || null,
       });
       order.accessToken = accessToken;

@@ -6,7 +6,8 @@ const TicketWaitlist = require('../models/TicketWaitlist');
 const svc = require('../services/miawezon.service');
 const ycp = require('../services/youcanpay');
 const { qrDataUrl, ticketsPdf, ticketFields } = require('../services/ticketDocs');
-const { sendTicketsEmail } = require('../services/ticketMail');
+const fs = require('fs');
+const { sendTicketsEmail, sendTransferInstructions, sendProofReceived, sendAdminProofNotice } = require('../services/ticketMail');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const clean = (s, max = 120) => String(s ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -61,6 +62,8 @@ async function orderPayload(order, { withQr = true } = {}) {
     expiresAt: order.expiresAt,
     createdAt: order.createdAt,
     paidAt: order.payment?.paidAt || null,
+    proofUploadedAt: order.proof?.uploadedAt || null,
+    rejectionReason: order.status === 'rejected' ? order.rejectionReason || '' : '',
     tickets: list,
   };
 }
@@ -77,6 +80,15 @@ async function loadOrderWithToken(req) {
     throw err;
   }
   return { order, token };
+}
+
+// Mode de paiement expose au front
+function paymentConfig(ev) {
+  if ((ev.paymentMode || 'transfer') === 'transfer') {
+    const accounts = (ev.bankAccounts || []).filter((b) => b && (b.rib || b.iban));
+    return { provider: 'transfer', ready: accounts.length > 0, mock: false };
+  }
+  return ycp.publicConfig();
 }
 
 // Finalise une commande apres verification du paiement (utilise par confirm, webhook et admin)
@@ -117,17 +129,19 @@ async function finalizePayment(order, transactionId, { token } = {}) {
     }
   }
 
+  return markPaid(order, {
+    'payment.transactionId': transactionId,
+    'payment.amount': result.amount,
+    'payment.method': result.method,
+    'payment.raw': result.raw,
+  }, { token, from: ['pending', 'expired', 'failed'] });
+}
+
+// Passe la commande en "payee", emet les billets et les envoie par e-mail
+async function markPaid(order, fields, { token, from }) {
   const updated = await svc.transitionOrder(
-    { _id: order._id, status: { $in: ['pending', 'expired', 'failed'] } },
-    {
-      status: 'paid',
-      seatsHeld: true,
-      'payment.transactionId': transactionId,
-      'payment.amount': result.amount,
-      'payment.method': result.method,
-      'payment.paidAt': new Date(),
-      'payment.raw': result.raw,
-    }
+    { _id: order._id, status: { $in: from } },
+    { status: 'paid', seatsHeld: true, 'payment.paidAt': new Date(), ...fields }
   );
 
   if (!updated) {
@@ -142,11 +156,30 @@ async function finalizePayment(order, transactionId, { token } = {}) {
   const ev = await svc.getEvent();
   emitSale(updated);
 
-  sendTicketsEmail({ order: updated, tickets, event: ev, token: token || updated.accessToken })
+  sendTicketsEmail({ order: updated, tickets, event: ev, token: updated.accessToken })
     .then((sent) => sent && TicketOrder.updateOne({ _id: updated._id }, { emailSentAt: new Date() }))
     .catch((e) => console.error('MIAWEZON email:', e.message));
 
   return { order: updated, already: false };
+}
+
+// Validation d'un virement par l'admin (apres verification du reçu)
+async function approveTransfer(order, adminId) {
+  if (order.status === 'paid') return { order, already: true };
+  if (!['awaiting_validation', 'pending'].includes(order.status)) {
+    throw Object.assign(new Error('Cette commande ne peut plus être validée'), { statusCode: 409, code: 'ORDER_CLOSED' });
+  }
+  if (!order.seatsHeld) {
+    const blocked = await svc.holdSeats(order.items);
+    if (blocked) throw Object.assign(new Error('Plus assez de places pour valider cette commande'), { statusCode: 409, code: 'SOLD_OUT' });
+  }
+  return markPaid(order, {
+    'payment.provider': 'transfer',
+    'payment.method': 'Virement bancaire',
+    'payment.amount': order.total,
+    validatedAt: new Date(),
+    validatedBy: adminId,
+  }, { from: ['awaiting_validation', 'pending'] });
 }
 
 // ═══ PUBLIC ═════════════════════════════════════════════════════════════════
@@ -165,7 +198,7 @@ exports.getEvent = async (req, res, next) => {
       event: svc.publicEvent(ev),
       categories: cats.map(svc.publicCategory),
       serverTime: new Date(),
-      payment: ycp.publicConfig(),
+      payment: paymentConfig(ev),
       preview: !ev.published && isAdmin,
     });
   } catch (err) { next(err); }
@@ -192,7 +225,7 @@ exports.createOrder = async (req, res, next) => {
     const user = await optionalUser(req);
     if (!ev.published && user?.role !== 'admin') return res.status(404).json({ message: 'Billetterie indisponible', code: 'NOT_PUBLISHED' });
     if (svc.salesState(ev) !== 'open') return res.status(403).json({ message: 'La billetterie n\'est pas ouverte', code: 'SALES_CLOSED' });
-    if (!ycp.publicConfig().ready) return res.status(503).json({ message: 'Le paiement n\'est pas encore configuré', code: 'PAYMENT_NOT_READY' });
+    if (!paymentConfig(ev).ready) return res.status(503).json({ message: 'Le paiement n\'est pas encore configuré', code: 'PAYMENT_NOT_READY' });
 
     const buyer = {
       name: clean(req.body.buyer?.name, 80),
@@ -224,10 +257,13 @@ exports.createOrder = async (req, res, next) => {
     const holders = Array.from({ length: quantity }, (_, i) => clean(rawHolders[i], 80) || buyer.name);
 
     const order = await svc.createOrder({ ev, items, buyer, holders, lang: req.body.lang === 'en' ? 'en' : 'fr', userId: user?._id });
+    if ((ev.paymentMode || 'transfer') === 'transfer') {
+      sendTransferInstructions({ order, event: ev, token: order.accessToken }).catch((e) => console.error('MIAWEZON email:', e.message));
+    }
     res.status(201).json({
       order: await orderPayload(order),
       token: order.accessToken,
-      payment: ycp.publicConfig(),
+      payment: paymentConfig(ev),
     });
   } catch (err) {
     if (err.code === 'SOLD_OUT') return res.status(409).json({ message: err.message, code: 'SOLD_OUT', category: err.category });
@@ -337,5 +373,56 @@ exports.youcanpayWebhook = async (req, res) => {
   }
 };
 
+// Le client envoie son reçu de virement (PDF ou image)
+exports.submitProof = async (req, res, next) => {
+  const removeUpload = () => { if (req.file?.path) fs.unlink(req.file.path, () => {}); };
+  try {
+    const { order } = await loadOrderWithToken(req);
+    if (!req.file) return res.status(400).json({ message: 'Ajoutez votre reçu de virement (PDF ou image)', code: 'NO_FILE' });
+    if (String(req.body.confirm) !== 'true') { removeUpload(); return res.status(400).json({ message: 'Confirmez avoir effectué le virement', code: 'NOT_CONFIRMED' }); }
+    if (!['pending', 'awaiting_validation'].includes(order.status) || (order.status === 'pending' && order.expiresAt < new Date())) {
+      removeUpload();
+      return res.status(409).json({ message: 'Le délai pour envoyer le reçu est dépassé', code: 'ORDER_CLOSED' });
+    }
+    const previous = await TicketOrder.findById(order._id).select('+proof.file');
+    const proof = {
+      file: req.file.filename,
+      originalName: String(req.file.originalname || 'recu').slice(0, 120),
+      mime: req.file.mimetype,
+      size: req.file.size,
+      reference: clean(req.body.reference, 80),
+      uploadedAt: new Date(),
+    };
+    const updated = await svc.transitionOrder(
+      { _id: order._id, status: { $in: ['pending', 'awaiting_validation'] } },
+      { status: 'awaiting_validation', proof }
+    );
+    if (!updated) { removeUpload(); return res.status(409).json({ message: 'La commande a changé, rechargez la page', code: 'ORDER_CLOSED' }); }
+    if (previous?.proof?.file && previous.proof.file !== proof.file) fs.unlink(PROOF_PATH(previous.proof.file), () => {});
+
+    // Notification du tableau de bord en temps reel
+    try {
+      const { getIO } = require('../config/socket');
+      // Pas de donnees personnelles dans l'evenement (la salle admins n'est pas authentifiee)
+      getIO().to('admins').emit('miawezon:proof', { _id: updated._id, orderNumber: updated.orderNumber, total: updated.total });
+    } catch { /* socket non initialise */ }
+
+    const ev = await svc.getEvent();
+    sendProofReceived({ order: updated, event: ev }).catch((e) => console.error('MIAWEZON email:', e.message));
+    sendAdminProofNotice({ order: updated, proofPath: PROOF_PATH(proof.file), proofName: proof.originalName, proofMime: proof.mime })
+      .catch((e) => console.error('MIAWEZON email admin:', e.message));
+
+    res.json({ order: await orderPayload(updated) });
+  } catch (err) {
+    removeUpload();
+    next(err);
+  }
+};
+
+const PROOF_DIR = require('path').join(__dirname, '../../private/miawezon-proofs');
+const PROOF_PATH = (name) => require('path').join(PROOF_DIR, require('path').basename(name));
+exports.PROOF_DIR = PROOF_DIR;
+exports.PROOF_PATH = PROOF_PATH;
+exports.approveTransfer = approveTransfer;
 exports.finalizePayment = finalizePayment;
 exports.orderPayload = orderPayload;

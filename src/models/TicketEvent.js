@@ -47,6 +47,25 @@ const ticketEventSchema = new mongoose.Schema({
   },
 
   maxTicketsPerOrder: { type: Number, default: 10, min: 1, max: 50 },
+
+  // Paiement : transfer = virement bancaire avec reçu valide par l'admin, youcanpay = paiement en ligne
+  paymentMode: { type: String, enum: ['transfer', 'youcanpay'], default: 'transfer' },
+  // Comptes bancaires affiches au client pour le virement
+  bankAccounts: {
+    type: [{
+      _id: false,
+      bank: { type: String, default: '' },
+      holder: { type: String, default: '' },
+      rib: { type: String, default: '' },
+      iban: { type: String, default: '' },
+      swift: { type: String, default: '' },
+    }],
+    default: () => [{}, {}],
+  },
+  // Delai laisse au client pour envoyer son reçu (places bloquees pendant ce temps)
+  proofDeadlineHours: { type: Number, default: 24, min: 1, max: 168 },
+  // Delai de validation annonce au client
+  validationHours: { type: Number, default: 24, min: 1, max: 168 },
   contactEmail: { type: String, default: '' },
   contactPhone: { type: String, default: '' },
 }, { timestamps: true });
