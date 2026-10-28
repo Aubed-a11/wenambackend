@@ -4,8 +4,8 @@ const TicketOrder = require('../models/TicketOrder');
 const Ticket = require('../models/Ticket');
 const TicketWaitlist = require('../models/TicketWaitlist');
 const svc = require('../services/miawezon.service');
-const kkiapay = require('../services/kkiapay');
-const { qrDataUrl, ticketsPdf } = require('../services/ticketDocs');
+const ycp = require('../services/youcanpay');
+const { qrDataUrl, ticketsPdf, ticketFields } = require('../services/ticketDocs');
 const { sendTicketsEmail } = require('../services/ticketMail');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -35,6 +35,7 @@ async function orderPayload(order, { withQr = true } = {}) {
   const tickets = order.status === 'paid' || order.status === 'cancelled'
     ? await Ticket.find({ order: order._id }).sort({ _id: 1 })
     : [];
+  const ev = tickets.length ? await svc.getEvent() : null;
   const list = await Promise.all(tickets.map(async (t) => ({
     _id: t._id,
     number: t.number,
@@ -44,6 +45,8 @@ async function orderPayload(order, { withQr = true } = {}) {
     status: t.status,
     checkedInAt: t.checkedInAt,
     qr: withQr && t.status !== 'cancelled' ? await qrDataUrl(t) : null,
+    // Valeurs imprimees sur le modele (identiques au PDF)
+    fields: ticketFields({ ticket: t, order, event: ev }),
   })));
   return {
     _id: order._id,
@@ -86,9 +89,12 @@ async function finalizePayment(order, transactionId, { token } = {}) {
   const usedBy = await TicketOrder.findOne({ 'payment.transactionId': transactionId, _id: { $ne: order._id } }).select('_id');
   if (usedBy) throw Object.assign(new Error('Transaction déjà utilisée'), { statusCode: 409, code: 'TX_USED' });
 
-  const result = await kkiapay.verifyTransaction(transactionId, order.total);
+  const result = await ycp.verifyTransaction(transactionId, order);
   if (result.status !== 'SUCCESS') {
-    throw Object.assign(new Error('Paiement non validé par KKiaPay'), { statusCode: 402, code: 'PAYMENT_FAILED', providerStatus: result.status });
+    throw Object.assign(new Error('Paiement non validé par YouCan Pay'), { statusCode: 402, code: 'PAYMENT_FAILED', providerStatus: result.status });
+  }
+  if (result.orderId && result.orderId !== String(order._id)) {
+    throw Object.assign(new Error('Cette transaction concerne une autre commande'), { statusCode: 402, code: 'PAYMENT_FAILED' });
   }
   if (Number(result.amount) < order.total) {
     await TicketOrder.updateOne({ _id: order._id }, { 'payment.transactionId': transactionId, 'payment.amount': result.amount, 'payment.raw': result.raw, status: 'refund_needed' });
@@ -159,7 +165,7 @@ exports.getEvent = async (req, res, next) => {
       event: svc.publicEvent(ev),
       categories: cats.map(svc.publicCategory),
       serverTime: new Date(),
-      payment: kkiapay.publicConfig(),
+      payment: ycp.publicConfig(),
       preview: !ev.published && isAdmin,
     });
   } catch (err) { next(err); }
@@ -186,7 +192,7 @@ exports.createOrder = async (req, res, next) => {
     const user = await optionalUser(req);
     if (!ev.published && user?.role !== 'admin') return res.status(404).json({ message: 'Billetterie indisponible', code: 'NOT_PUBLISHED' });
     if (svc.salesState(ev) !== 'open') return res.status(403).json({ message: 'La billetterie n\'est pas ouverte', code: 'SALES_CLOSED' });
-    if (!kkiapay.publicConfig().ready) return res.status(503).json({ message: 'Le paiement n\'est pas encore configuré', code: 'PAYMENT_NOT_READY' });
+    if (!ycp.publicConfig().ready) return res.status(503).json({ message: 'Le paiement n\'est pas encore configuré', code: 'PAYMENT_NOT_READY' });
 
     const buyer = {
       name: clean(req.body.buyer?.name, 80),
@@ -221,7 +227,7 @@ exports.createOrder = async (req, res, next) => {
     res.status(201).json({
       order: await orderPayload(order),
       token: order.accessToken,
-      payment: kkiapay.publicConfig(),
+      payment: ycp.publicConfig(),
     });
   } catch (err) {
     if (err.code === 'SOLD_OUT') return res.status(409).json({ message: err.message, code: 'SOLD_OUT', category: err.category });
@@ -275,33 +281,52 @@ exports.downloadPdf = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// Webhook KKiaPay (filet de securite si le client ferme la page avant la confirmation).
-// Dans le tableau de bord KKiaPay : URL = https://api.wenamfood.com/api/miawezon/webhook/kkiapay
-// et meme secret que KKIAPAY_WEBHOOK_SECRET.
-exports.kkiapayWebhook = async (req, res) => {
+// Lance le paiement YouCan Pay : renvoie l'URL de la page de paiement securisee.
+// Au retour, le client revient sur /miawezon/reserver avec ?ycp=success ou ?ycp=error.
+exports.startPayment = async (req, res, next) => {
   try {
-    const secret = process.env.KKIAPAY_WEBHOOK_SECRET;
-    const got = req.headers['x-kkiapay-secret'];
-    if (!secret || got !== secret) return res.status(401).json({ message: 'Non autorisé' });
+    const { order, token } = await loadOrderWithToken(req);
+    if (order.status === 'paid') return res.json({ paid: true });
+    if (order.status !== 'pending' || order.expiresAt < new Date()) {
+      return res.status(409).json({ message: 'Le délai de paiement est dépassé', code: 'ORDER_CLOSED' });
+    }
+    const cfg = ycp.publicConfig();
+    if (cfg.mock) return res.json({ mock: true });
+    const front = (process.env.FRONTEND_URL || 'https://www.wenamfood.com').replace(/\/$/, '');
+    const back = (r) => `${front}/miawezon/reserver?order=${order._id}&t=${token}&ycp=${r}`;
+    const { tokenId, paymentUrl } = await ycp.createPayment({
+      order,
+      ip: req.ip,
+      successUrl: back('success'),
+      errorUrl: back('error'),
+      lang: req.body?.lang === 'en' ? 'en' : 'fr',
+    });
+    await TicketOrder.updateOne({ _id: order._id }, { 'payment.provider': 'youcanpay', 'payment.tokenId': tokenId });
+    res.json({ paymentUrl });
+  } catch (err) {
+    if (typeof err.code === 'string') return res.status(err.statusCode || 400).json({ message: err.message, code: err.code });
+    next(err);
+  }
+};
 
-    const transactionId = clean(req.body?.transactionId, 120);
+// Webhook YouCan Pay (paiement confirme meme si le client ferme la page).
+// Dans le tableau de bord YouCan Pay : URL = https://api.wenamfood.com/api/miawezon/webhook/youcanpay
+// La signature (X-Youcanpay-Signature) est verifiee avec la cle privee ; la transaction est
+// ensuite revalidee aupres de l'API avant d'emettre les billets.
+exports.youcanpayWebhook = async (req, res) => {
+  try {
+    if (!ycp.validWebhook(req.rawBody, req.headers['x-youcanpay-signature'])) {
+      return res.status(401).json({ message: 'Signature invalide' });
+    }
+    const b = req.body || {};
+    const p = b.payload || b.data || b;
+    const tx = p.transaction || b.transaction || p;
+    const transactionId = clean(tx?.id || p?.transaction_id || b.transaction_id, 120);
+    const orderRef = clean(tx?.order_id || p?.order_id || p?.metadata?.orderId, 60);
     if (!transactionId) return res.json({ ok: true });
 
     let order = await TicketOrder.findOne({ 'payment.transactionId': transactionId }).select('+accessToken');
-    if (!order) {
-      // Le widget transmet la reference de commande dans "data" / "partnerId"
-      let ref = req.body?.partnerId || req.body?.stateData || req.body?.data;
-      if (typeof ref === 'string') {
-        try { const p = JSON.parse(ref); ref = p.orderId || p.orderNumber || ref; } catch { /* texte brut */ }
-      } else if (ref && typeof ref === 'object') {
-        ref = ref.orderId || ref.orderNumber;
-      }
-      if (ref) {
-        order = /^[a-f0-9]{24}$/i.test(String(ref))
-          ? await TicketOrder.findById(ref).select('+accessToken')
-          : await TicketOrder.findOne({ orderNumber: String(ref) }).select('+accessToken');
-      }
-    }
+    if (!order && /^[a-f0-9]{24}$/i.test(orderRef)) order = await TicketOrder.findById(orderRef).select('+accessToken');
     if (order && order.status !== 'paid') {
       await finalizePayment(order, transactionId).catch((e) => console.error('MIAWEZON webhook:', e.message));
     }

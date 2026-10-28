@@ -22,29 +22,24 @@ npm install
 
 (nouvelle dépendance : `html5-qrcode` pour le scanner du jour J)
 
-## 2. Variables d'environnement du backend
+## 2. Variables d'environnement du backend (YouCan Pay)
 
 Ajouter dans le `.env` du serveur (voir `.env.example`) :
 
 ```
-KKIAPAY_PUBLIC_KEY=...
-KKIAPAY_PRIVATE_KEY=...
-KKIAPAY_SECRET=...
-KKIAPAY_SANDBOX=true
-KKIAPAY_WEBHOOK_SECRET=un-secret-au-choix
+YCP_PRIVATE_KEY=pri_...
+YCP_PUBLIC_KEY=pub_...
+YCP_SANDBOX=true
 FRONTEND_URL=https://www.wenamfood.com
 ```
 
-Passer `KKIAPAY_SANDBOX=false` le jour de l'ouverture réelle (1er avril 2027).
+Les clés se trouvent dans le tableau de bord YouCan Pay, rubrique Paramètres puis Clés API. Passer `YCP_SANDBOX=false` (avec les clés de production) pour l'ouverture réelle de la billetterie.
 
-Dans le tableau de bord KKiaPay, configurer le webhook :
-URL `https://api.wenamfood.com/api/miawezon/webhook/kkiapay`, même secret que `KKIAPAY_WEBHOOK_SECRET`.
-Il sert de filet de sécurité si un client paie puis ferme la page avant la confirmation.
+Dans YouCan Pay, déclarer le webhook `https://api.wenamfood.com/api/miawezon/webhook/youcanpay`. Il confirme le paiement même si le client ferme la page avant de revenir sur le site. La signature est vérifiée avec la clé privée.
 
-Pour tester en local sans KKiaPay : `KKIAPAY_MOCK=true` (refusé automatiquement si `NODE_ENV=production`).
-Le bouton de paiement devient « Simuler le paiement (test) ».
+Déroulé : le client choisit ses billets, puis il est redirigé vers la page sécurisée YouCan Pay (carte bancaire Visa, Mastercard, CMI ou CashPlus) et revient ensuite sur le site. Le serveur revérifie la transaction (montant en DH, commande) auprès de YouCan Pay avant d'émettre les billets.
 
-Les e-mails de billets utilisent le SMTP déjà configuré (`SMTP_*`, `FROM_EMAIL`).
+Pour tester en local sans YouCan Pay : `YCP_MOCK=true` (refusé automatiquement si `NODE_ENV=production`).
 
 ## 3. Mise en ligne
 
@@ -52,7 +47,7 @@ Au premier démarrage, le serveur crée la configuration MIAWÉZON avec :
 
 - rubrique **masquée** du public (seuls les admins la voient, avec un bandeau « Aperçu »)
 - ouverture de la billetterie le 1er avril 2027 à 00h00
-- ZINLI 250 MAD, 50 places ; AGBADJA 550 MAD, 20 places (valeurs d'exemple, à régler dans l'admin)
+- ZINLI 350 DH, 50 places ; AGBADJA 500 DH, 20 places (à régler dans l'admin)
 
 Tout se règle dans **Admin > MIAWÉZON > Réglages** :
 
@@ -74,7 +69,7 @@ Images provisoires dans `public/images/miawezon/`, à remplacer en gardant les m
 - `banniere-accueil.jpg` (bannière de la page d'accueil)
 - `concept.jpg`, `galerie-1.jpg` à `galerie-5.jpg`
 
-Remplacer aussi `src/assets/miawezon-logo.png` côté backend (logo imprimé sur les billets PDF).
+Billets : les modèles fournis sont dans `public/images/miawezon/ticket-zinli.jpg` et `ticket-agbadja.jpg` (front) et `src/assets/tickets/` (backend). Le système y écrit le prix, la date, le lieu, le n° de billet, le nom, le QR code, le logo Wênam et le n° d'achat. Les positions sont dans `layout.json` (backend) et `src/data/ticketLayout.json` (front), à garder identiques.
 
 Vidéo de présentation optionnelle : renseigner `conceptVideo` dans `src/data/miawezon.js`.
 
@@ -85,7 +80,7 @@ Public :
 - `/` : bannière MIAWÉZON sous le hero, lien « MIAWÉZON Nouveau » dans le menu, sélecteur FR | EN
 - `/miawezon` : page événement (concept, galerie, infos, billetterie, compte à rebours, « Me prévenir »)
 - `/miawezon/menu` : menu du buffet
-- `/miawezon/reserver` : tunnel en 4 étapes (catégorie, participant, paiement KKiaPay, confirmation)
+- `/miawezon/reserver` : tunnel en 4 étapes (catégorie, participant, paiement YouCan Pay, confirmation)
 - `/miawezon/billets/:id` : billets avec QR code, PDF, partage WhatsApp
 
 Admin :
@@ -96,8 +91,8 @@ Admin :
 ## 6. Fonctionnement de la billetterie
 
 - les places sont bloquées 20 minutes pendant le paiement, puis remises en vente si le client ne paie pas
-- le paiement est revérifié côté serveur auprès de KKiaPay (montant et statut) avant d'émettre les billets
+- le paiement est revérifié côté serveur auprès de YouCan Pay (montant et statut) avant d'émettre les billets
 - un billet = un QR code unique, nominatif, valable pour une seule entrée (le second scan affiche « Déjà utilisé »)
-- le client reçoit un e-mail avec les billets en PDF et un lien privé vers ses billets
+- le client reçoit un e-mail avec les billets en PDF (au format des modèles) et un lien privé vers ses billets
 
-À savoir : l'annulation d'une commande payée ne rembourse pas automatiquement, le remboursement se fait depuis le tableau de bord KKiaPay.
+À savoir : l'annulation d'une commande payée ne rembourse pas automatiquement, le remboursement se fait depuis le tableau de bord YouCan Pay.

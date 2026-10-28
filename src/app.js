@@ -24,7 +24,8 @@ app.use(cors({
   credentials: true,
 }));
 app.use(morgan('dev'));
-app.use(express.json({ limit: '10mb' }));
+// Le corps brut est garde pour verifier la signature des webhooks YouCan Pay
+app.use(express.json({ limit: '10mb', verify: (req, res, buf) => { req.rawBody = buf.toString('utf8'); } }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });

@@ -43,7 +43,8 @@ const ticketOrderSchema = new mongoose.Schema({
   expiresAt: { type: Date, required: true },
 
   payment: {
-    provider: { type: String, default: 'kkiapay' },
+    provider: { type: String, default: 'youcanpay' },
+    tokenId: { type: String, default: null },
     transactionId: { type: String, default: null },
     method: { type: String, default: '' },
     amount: Number,

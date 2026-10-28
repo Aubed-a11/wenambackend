@@ -1,0 +1,178 @@
+{
+  "_doc": "Positions des champs sur les modeles de billets, en pixels de l'image modele. Copie identique dans le front : src/data/ticketLayout.json. Si vous changez un modele, gardez la meme taille d'image ou ajustez ces valeurs.",
+  "AGBADJA": {
+    "image": "agbadja.jpg",
+    "width": 1512,
+    "height": 520,
+    "fields": {
+      "price": {
+        "x": 526,
+        "cy": 300,
+        "w": 176,
+        "size": 44,
+        "weight": 800,
+        "align": "center",
+        "gradient": [
+          "#F8CB74",
+          "#C98A35"
+        ]
+      },
+      "date": {
+        "x": 790,
+        "cy": 297,
+        "w": 192,
+        "size": 15,
+        "weight": 600,
+        "align": "left",
+        "color": "#F0EEEA"
+      },
+      "venue": {
+        "x": 790,
+        "cy": 352,
+        "w": 192,
+        "size": 15,
+        "weight": 600,
+        "align": "left",
+        "color": "#F0EEEA"
+      },
+      "number": {
+        "x": 1182,
+        "cy": 175,
+        "w": 268,
+        "size": 21,
+        "weight": 700,
+        "align": "center",
+        "color": "#1A0F00",
+        "spacing": 1
+      },
+      "holder": {
+        "x": 1182,
+        "cy": 264,
+        "w": 268,
+        "size": 21,
+        "weight": 700,
+        "align": "center",
+        "color": "#1A0F00"
+      },
+      "stubPrice": {
+        "x": 1382,
+        "cy": 447,
+        "w": 80,
+        "size": 16,
+        "weight": 700,
+        "align": "left",
+        "color": "#0B0602"
+      },
+      "purchase": {
+        "x": 1285,
+        "cy": 481,
+        "w": 175,
+        "size": 13.5,
+        "weight": 700,
+        "align": "left",
+        "color": "#1F1307",
+        "spacing": 1
+      }
+    },
+    "qr": {
+      "x": 1174,
+      "y": 306,
+      "size": 118
+    },
+    "logo": {
+      "x": 1322,
+      "y": 306,
+      "w": 140,
+      "h": 118,
+      "bg": "#1E120A",
+      "radius": 12,
+      "pad": 10
+    }
+  },
+  "ZINLI": {
+    "image": "zinli.jpg",
+    "width": 1512,
+    "height": 470,
+    "fields": {
+      "price": {
+        "x": 512,
+        "cy": 270,
+        "w": 174,
+        "size": 44,
+        "weight": 800,
+        "align": "center",
+        "color": "#4F1E03"
+      },
+      "date": {
+        "x": 770,
+        "cy": 267,
+        "w": 184,
+        "size": 15,
+        "weight": 600,
+        "align": "left",
+        "color": "#310E05"
+      },
+      "venue": {
+        "x": 770,
+        "cy": 318,
+        "w": 184,
+        "size": 15,
+        "weight": 600,
+        "align": "left",
+        "color": "#310E05"
+      },
+      "number": {
+        "x": 1182,
+        "cy": 168,
+        "w": 268,
+        "size": 21,
+        "weight": 700,
+        "align": "center",
+        "color": "#1A0F00",
+        "spacing": 1
+      },
+      "holder": {
+        "x": 1182,
+        "cy": 249,
+        "w": 268,
+        "size": 21,
+        "weight": 700,
+        "align": "center",
+        "color": "#1A0F00"
+      },
+      "stubPrice": {
+        "x": 1362,
+        "cy": 404,
+        "w": 80,
+        "size": 15,
+        "weight": 700,
+        "align": "left",
+        "color": "#0B0602"
+      },
+      "purchase": {
+        "x": 1285,
+        "cy": 431,
+        "w": 175,
+        "size": 13.5,
+        "weight": 700,
+        "align": "left",
+        "color": "#1F1307",
+        "spacing": 1
+      }
+    },
+    "qr": {
+      "x": 1180,
+      "y": 285,
+      "size": 102
+    },
+    "logo": {
+      "x": 1321,
+      "y": 286,
+      "w": 136,
+      "h": 98,
+      "bg": "#2B1408",
+      "radius": 12,
+      "pad": 8
+    }
+  }
+}

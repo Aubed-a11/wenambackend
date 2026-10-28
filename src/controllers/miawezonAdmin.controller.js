@@ -4,7 +4,7 @@ const TicketOrder = require('../models/TicketOrder');
 const Ticket = require('../models/Ticket');
 const TicketWaitlist = require('../models/TicketWaitlist');
 const svc = require('../services/miawezon.service');
-const kkiapay = require('../services/kkiapay');
+const ycp = require('../services/youcanpay');
 const { sendTicketsEmail, sendWaitlistEmail } = require('../services/ticketMail');
 const { finalizePayment, orderPayload } = require('./miawezon.controller');
 
@@ -26,7 +26,7 @@ exports.getConfig = async (req, res, next) => {
     res.json({
       event: { ...svc.publicEvent(ev), _id: ev._id },
       categories: cats.map(svc.publicCategory),
-      payment: { ...kkiapay.publicConfig(), configured: kkiapay.isConfigured() },
+      payment: { ...ycp.publicConfig(), configured: ycp.isConfigured() },
       holdMinutes: svc.HOLD_MINUTES,
     });
   } catch (err) { next(err); }
@@ -103,7 +103,7 @@ exports.updateCategory = async (req, res, next) => {
     const b = req.body || {};
     if ('price' in b) {
       const p = Number(b.price);
-      if (!(p >= 10)) return res.status(400).json({ message: 'Prix invalide (minimum 10 MAD)' });
+      if (!(p >= 10)) return res.status(400).json({ message: 'Prix invalide (minimum 10 DH)' });
       c.price = Math.round(p);
     }
     if ('capacity' in b) {
@@ -289,7 +289,7 @@ exports.verifyPayment = async (req, res, next) => {
     const o = await TicketOrder.findById(req.params.id).select('+accessToken');
     if (!o) return res.status(404).json({ message: 'Commande introuvable' });
     const tx = String(req.body?.transactionId || o.payment?.transactionId || '').trim();
-    if (!tx) return res.status(400).json({ message: 'Identifiant de transaction KKiaPay requis' });
+    if (!tx) return res.status(400).json({ message: 'Identifiant de transaction YouCan Pay requis' });
     const { order } = await finalizePayment(o, tx, { token: o.accessToken });
     res.json({ order: { _id: order._id, status: order.status, orderNumber: order.orderNumber } });
   } catch (err) {
@@ -309,7 +309,7 @@ exports.cancelOrder = async (req, res, next) => {
     if (!updated) return res.status(409).json({ message: 'La commande a changé, rechargez la page' });
     if (o.seatsHeld) await svc.releaseSeats(o.items);
     await svc.cancelOrderTickets(o._id);
-    res.json({ message: o.status === 'pending' ? 'Commande annulée' : 'Commande annulée. Pensez à rembourser le client depuis KKiaPay.' });
+    res.json({ message: o.status === 'pending' ? 'Commande annulée' : 'Commande annulée. Pensez à rembourser le client depuis YouCan Pay.' });
   } catch (err) { next(err); }
 };
 

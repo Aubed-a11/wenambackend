@@ -17,7 +17,8 @@ router.get('/orders/:id', pub.getOrder);
 router.post('/orders/:id/confirm', orderLimiter, pub.confirmOrder);
 router.post('/orders/:id/cancel', pub.cancelPending);
 router.get('/orders/:id/tickets.pdf', pub.downloadPdf);
-router.post('/webhook/kkiapay', pub.kkiapayWebhook);
+router.post('/orders/:id/pay', orderLimiter, pub.startPayment);
+router.post('/webhook/youcanpay', pub.youcanpayWebhook);
 
 // ── Admin ──
 const a = [verifyToken, isAdmin];
