@@ -8,7 +8,8 @@ const PDFDocument = require('pdfkit');
 const ASSETS = path.join(__dirname, '../assets');
 const TPL_DIR = path.join(ASSETS, 'tickets');
 const LAYOUT = JSON.parse(fs.readFileSync(path.join(TPL_DIR, 'layout.json'), 'utf8'));
-const LOGO = path.join(ASSETS, 'wenam-logo.png');
+// Logo MIAWEZON (version doree) pose dans la case logo du talon
+const LOGO = path.join(ASSETS, 'miawezon-logo-gold.png');
 const FONTS = {
   600: path.join(ASSETS, 'fonts/montserrat-latin-600-normal.woff'),
   700: path.join(ASSETS, 'fonts/montserrat-latin-700-normal.woff'),
@@ -113,7 +114,7 @@ const PAGE_W = 737;
 async function ticketsPdf({ order, tickets, event }) {
   const first = layoutFor(tickets[0]?.categoryCode);
   const s0 = PAGE_W / first.width;
-  const doc = new PDFDocument({ size: [PAGE_W, first.height * s0], margin: 0, autoFirstPage: false, info: { Title: `MIAWEZON ${order.orderNumber}`, Author: 'Wenam' } });
+  const doc = new PDFDocument({ size: [PAGE_W, first.height * s0], margin: 0, autoFirstPage: false, info: { Title: `MIAWEZON ${order.orderNumber}`, Author: 'MIAWEZON' } });
   for (const [w, file] of Object.entries(FONTS)) doc.registerFont(`mz-${w}`, file);
   const chunks = [];
   doc.on('data', (c) => chunks.push(c));

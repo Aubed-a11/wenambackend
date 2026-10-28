@@ -1,15 +1,33 @@
+const path = require('path');
 const nodemailer = require('nodemailer');
 const { ticketsPdf, fmtPrice, eventDateText, labelOr, T } = require('./ticketDocs');
+
+// Courriels MIAWEZON, envoyes depuis contact@wenamfood.com.
+//
+// Variables d'environnement (toutes optionnelles) :
+//   MIAWEZON_FROM_EMAIL   adresse d'expedition (par defaut contact@wenamfood.com)
+//   MIAWEZON_FROM_NAME    nom affiche (par defaut MIAWÉZON)
+//   MIAWEZON_SMTP_HOST / _PORT / _SECURE / _USER / _PASS
+//       serveur SMTP de la boite contact@wenamfood.com. Si absent, le SMTP principal (SMTP_*) est utilise :
+//       il doit alors etre autorise a envoyer au nom de contact@wenamfood.com.
+
+const LOGO = path.join(__dirname, '../assets/miawezon-logo-light.png');
+const LOGO_CID = 'miawezon-logo';
+
+const fromEmail = () => process.env.MIAWEZON_FROM_EMAIL || 'contact@wenamfood.com';
+const fromName = () => process.env.MIAWEZON_FROM_NAME || 'MIAWÉZON';
 
 let transporter = null;
 function getTransporter() {
   if (transporter) return transporter;
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return null;
+  const own = Boolean(process.env.MIAWEZON_SMTP_HOST && process.env.MIAWEZON_SMTP_USER);
+  const p = own ? 'MIAWEZON_SMTP_' : 'SMTP_';
+  if (!process.env[`${p}HOST`] || !process.env[`${p}USER`]) return null;
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    host: process.env[`${p}HOST`],
+    port: Number(process.env[`${p}PORT`]) || 587,
+    secure: process.env[`${p}SECURE`] === 'true',
+    auth: { user: process.env[`${p}USER`], pass: process.env[`${p}PASS`] },
   });
   return transporter;
 }
@@ -22,46 +40,56 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 
 const M = {
   fr: {
-    subject: (n) => `Vos billets MIAWÉZON - ${n}`,
+    subject: (n) => `Bienvenue à MIAWÉZON : vos billets ${n}`,
     hello: 'Bonjour',
-    thanks: 'Votre réservation pour MIAWÉZON est confirmée. Vos billets sont joints à ce courriel au format PDF.',
+    welcomeTitle: 'Bienvenue à MIAWÉZON !',
+    welcome: 'Nous sommes ravis de vous compter parmi nos invités. MIAWÉZON, c\'est un voyage au cœur des saveurs africaines : un buffet généreux, de la culture et des moments de partage. Nous avons hâte de vous accueillir.',
+    thanks: 'Votre réservation est confirmée. Vos billets sont joints à ce courriel au format PDF.',
     summary: 'Récapitulatif',
     total: 'Total payé',
     see: 'Voir mes billets en ligne',
-    keep: 'Présentez le QR code de chaque billet à l\'entrée. Chaque billet est nominatif et valable pour une seule entrée.',
-    team: 'Merci de votre confiance,<br>L\'équipe Wênam',
+    keep: 'Le jour de l\'événement, présentez le QR code de chaque billet à l\'entrée, sur votre téléphone ou imprimé. Chaque billet est nominatif et valable pour une seule entrée.',
+    team: 'À très bientôt,<br>L\'équipe MIAWÉZON',
+    contact: 'Une question ? Écrivez-nous à',
     waitSubject: 'La billetterie MIAWÉZON est ouverte',
-    waitBody: 'La billetterie de MIAWÉZON vient d\'ouvrir. Les places sont limitées, réservez la vôtre dès maintenant.',
+    waitTitle: 'La billetterie est ouverte !',
+    waitBody: 'Vous nous aviez demandé de vous prévenir : la billetterie de MIAWÉZON vient d\'ouvrir. Les places sont limitées, réservez la vôtre dès maintenant.',
     waitCta: 'Réserver mes billets',
   },
   en: {
-    subject: (n) => `Your MIAWÉZON tickets - ${n}`,
+    subject: (n) => `Welcome to MIAWÉZON: your tickets ${n}`,
     hello: 'Hello',
-    thanks: 'Your MIAWÉZON booking is confirmed. Your tickets are attached to this email as a PDF.',
+    welcomeTitle: 'Welcome to MIAWÉZON!',
+    welcome: 'We are delighted to count you among our guests. MIAWÉZON is a journey into African flavours: a generous buffet, culture and moments of sharing. We look forward to welcoming you.',
+    thanks: 'Your booking is confirmed. Your tickets are attached to this email as a PDF.',
     summary: 'Summary',
     total: 'Total paid',
     see: 'View my tickets online',
-    keep: 'Show the QR code of each ticket at the entrance. Each ticket is personal and valid for one entry only.',
-    team: 'Thank you,<br>The Wênam team',
+    keep: 'On the day, show the QR code of each ticket at the entrance, on your phone or printed. Each ticket is personal and valid for one entry only.',
+    team: 'See you soon,<br>The MIAWÉZON team',
+    contact: 'Any question? Write to us at',
     waitSubject: 'MIAWÉZON ticketing is open',
-    waitBody: 'MIAWÉZON ticketing has just opened. Seats are limited, book yours now.',
+    waitTitle: 'Ticketing is open!',
+    waitBody: 'You asked us to let you know: MIAWÉZON ticketing has just opened. Seats are limited, book yours now.',
     waitCta: 'Book my tickets',
   },
 };
 
-function layout(inner) {
+function layout(inner, m) {
   return `
   <div style="font-family:Lato,Arial,sans-serif;max-width:560px;margin:0 auto;background:#FAF3E8;border-radius:16px;overflow:hidden;color:#1A0F00">
-    <div style="background:#8B3A0F;padding:28px 32px;text-align:center;border-bottom:4px solid #C4531A">
-      <p style="font-family:Georgia,serif;font-size:30px;font-weight:700;color:#FAF3E8;margin:0;letter-spacing:1px">MIAWÉZON</p>
-      <p style="font-family:Georgia,serif;font-size:13px;font-style:italic;color:#F3E3C3;margin:6px 0 0">Wênam</p>
+    <div style="background:#1E120A;padding:30px 32px;text-align:center;border-bottom:4px solid #C98A35">
+      <img src="cid:${LOGO_CID}" alt="MIAWÉZON" width="260" style="display:block;margin:0 auto;max-width:80%;height:auto;border:0" />
     </div>
     <div style="padding:32px">${inner}</div>
-    <div style="background:#6B2C0B;padding:14px 32px;text-align:center">
-      <a href="${frontUrl()}" style="color:#F3E3C3;font-size:12px;text-decoration:none">wenamfood.com</a>
+    <div style="background:#1E120A;padding:16px 32px;text-align:center;font-size:12px;color:#E8D3B0">
+      ${m.contact} <a href="mailto:${fromEmail()}" style="color:#F8CB74;text-decoration:none">${fromEmail()}</a>
+      <br><a href="${frontUrl()}/miawezon" style="color:#E8D3B0;text-decoration:none">${frontUrl().replace(/^https?:\/\//, '')}/miawezon</a>
     </div>
   </div>`;
 }
+
+const logoAttachment = () => ({ filename: 'miawezon.png', path: LOGO, cid: LOGO_CID });
 
 async function sendTicketsEmail({ order, tickets, event, token }) {
   const tr = getTransporter();
@@ -82,7 +110,9 @@ async function sendTicketsEmail({ order, tickets, event, token }) {
     </tr>`).join('');
 
   const html = layout(`
+    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${m.welcomeTitle}</p>
     <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 14px">${m.welcome}</p>
     <p style="font-size:15px;line-height:1.6;margin:0 0 24px">${m.thanks}</p>
     <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#8B6B3D;margin:0 0 6px">${m.summary} · ${esc(order.orderNumber)}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">${lines}
@@ -98,14 +128,18 @@ async function sendTicketsEmail({ order, tickets, event, token }) {
     </p>
     <p style="font-size:13px;line-height:1.6;color:#8B6B3D;margin:0 0 20px">${m.keep}</p>
     <p style="font-size:14px;margin:0">${m.team}</p>
-  `);
+  `, m);
 
   await tr.sendMail({
-    from: `"Wênam" <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
+    from: `"${fromName()}" <${fromEmail()}>`,
+    replyTo: fromEmail(),
     to: order.buyer.email,
     subject: m.subject(order.orderNumber),
     html,
-    attachments: [{ filename: `Billets-MIAWEZON-${order.orderNumber}.pdf`, content: pdf, contentType: 'application/pdf' }],
+    attachments: [
+      logoAttachment(),
+      { filename: `Billets-MIAWEZON-${order.orderNumber}.pdf`, content: pdf, contentType: 'application/pdf' },
+    ],
   });
   return true;
 }
@@ -115,18 +149,21 @@ async function sendWaitlistEmail({ entry }) {
   if (!tr) return false;
   const m = M[entry.lang === 'en' ? 'en' : 'fr'];
   const html = layout(`
+    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${m.waitTitle}</p>
     <p style="font-size:16px;margin:0 0 12px">${m.hello}${entry.name ? ` <strong>${esc(entry.name)}</strong>` : ''},</p>
     <p style="font-size:15px;line-height:1.6;margin:0 0 24px">${m.waitBody}</p>
     <p style="text-align:center;margin:28px 0">
       <a href="${frontUrl()}/miawezon#billetterie" style="display:inline-block;background:#C4531A;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${m.waitCta}</a>
     </p>
     <p style="font-size:14px;margin:0">${m.team}</p>
-  `);
+  `, m);
   await tr.sendMail({
-    from: `"Wênam" <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
+    from: `"${fromName()}" <${fromEmail()}>`,
+    replyTo: fromEmail(),
     to: entry.email,
     subject: m.waitSubject,
     html,
+    attachments: [logoAttachment()],
   });
   return true;
 }

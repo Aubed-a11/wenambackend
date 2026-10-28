@@ -41,6 +41,22 @@ Déroulé : le client choisit ses billets, puis il est redirigé vers la page s�
 
 Pour tester en local sans YouCan Pay : `YCP_MOCK=true` (refusé automatiquement si `NODE_ENV=production`).
 
+## 2 bis. Courriels des billets (contact@wenamfood.com)
+
+Les billets partent de `contact@wenamfood.com`, sous le nom « MIAWÉZON », avec un message de bienvenue, le logo MIAWÉZON et les billets en PDF. Ajouter dans le `.env` du serveur les accès SMTP de cette boîte :
+
+```
+MIAWEZON_SMTP_HOST=smtp.hostinger.com
+MIAWEZON_SMTP_PORT=465
+MIAWEZON_SMTP_SECURE=true
+MIAWEZON_SMTP_USER=contact@wenamfood.com
+MIAWEZON_SMTP_PASS=mot-de-passe-de-la-boite
+```
+
+(valeurs à adapter à l'hébergeur de la boîte mail). Sans ces lignes, le SMTP principal (`SMTP_*`) est utilisé et doit être autorisé à envoyer au nom de contact@wenamfood.com.
+
+Logo : le logo MIAWÉZON (extrait des modèles de billets) est dans `public/images/miawezon/logo-dark.png`, `logo-light.png` et `logo-gold.png` (front) et `src/assets/miawezon-logo-*.png` (backend). Il remplace le logo Wênam dans toute la rubrique.
+
 ## 3. Mise en ligne
 
 Au premier démarrage, le serveur crée la configuration MIAWÉZON avec :
