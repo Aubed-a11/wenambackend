@@ -16,10 +16,23 @@ const FONTS = {
   800: path.join(ASSETS, 'fonts/montserrat-latin-800-normal.woff'),
 };
 
-const qrPayload = (ticket) => `MIAWEZON:${ticket.code}`;
+// Le QR code est un lien vers la page du billet : n'importe quel appareil photo l'ouvre,
+// et le scanner du jour J en extrait le code.
+const publicUrl = () => (process.env.FRONTEND_URL || 'https://www.wenamfood.com').replace(/\/$/, '');
+// Lien court (/mz/CODE) : QR plus petit en modules, donc plus gros a l'impression et plus facile a scanner
+const qrPayload = (ticket) => `${publicUrl()}/mz/${ticket.code}`;
 
-// QR code fond transparent, pour se poser sur le talon dore des modeles
-const QR_OPTS = { errorCorrectionLevel: 'M', margin: 0, color: { dark: '#1A0F00', light: '#00000000' } };
+// Extrait le code d'un QR scanne (lien, ancien format MIAWEZON:CODE, ou saisie manuelle)
+function parseScanned(value) {
+  let raw = String(value || '').trim();
+  const m = raw.match(/\/(?:miawezon\/billet|mz)\/([A-Za-z0-9_-]+)/);
+  if (m) raw = m[1];
+  else if (raw.toUpperCase().startsWith('MIAWEZON:')) raw = raw.slice(9);
+  return raw.trim().toUpperCase();
+}
+
+// QR noir sur blanc, pose sur une pastille blanche (marge de silence) pour etre lu par tous les telephones
+const QR_OPTS = { errorCorrectionLevel: 'M', margin: 0, color: { dark: '#000000', light: '#FFFFFF' } };
 const qrDataUrl = (ticket) => QRCode.toDataURL(qrPayload(ticket), { ...QR_OPTS, width: 360 });
 const qrBuffer = (ticket) => QRCode.toBuffer(qrPayload(ticket), { ...QR_OPTS, width: 480 });
 
@@ -131,7 +144,10 @@ async function ticketsPdf({ order, tickets, event }) {
     for (const [key, f] of Object.entries(L.fields)) drawField(doc, f, values[key], s);
 
     const qr = await qrBuffer(tk);
-    doc.image(qr, L.qr.x * s, L.qr.y * s, { width: L.qr.size * s, height: L.qr.size * s });
+    const q = L.qr;
+    const pad = q.pad || 0;
+    if (q.bg) doc.roundedRect(q.x * s, q.y * s, q.size * s, q.size * s, (q.radius || 0) * s).fill(q.bg);
+    doc.image(qr, (q.x + pad) * s, (q.y + pad) * s, { width: (q.size - 2 * pad) * s, height: (q.size - 2 * pad) * s });
     if (hasLogo) {
       const g = L.logo;
       // Logo dore sur un badge sombre pour rester lisible sur le talon dore
@@ -152,4 +168,4 @@ async function ticketsPdf({ order, tickets, event }) {
   return done;
 }
 
-module.exports = { qrPayload, qrDataUrl, qrBuffer, ticketsPdf, ticketFields, fmtPrice, eventDateText, ticketDateText, labelOr, T };
+module.exports = { qrPayload, parseScanned, qrDataUrl, qrBuffer, ticketsPdf, ticketFields, fmtPrice, eventDateText, ticketDateText, labelOr, T };

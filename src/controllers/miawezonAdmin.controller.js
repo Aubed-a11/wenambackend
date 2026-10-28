@@ -1,3 +1,4 @@
+const { parseScanned } = require('../services/ticketDocs');
 const TicketEvent = require('../models/TicketEvent');
 const TicketCategory = require('../models/TicketCategory');
 const TicketOrder = require('../models/TicketOrder');
@@ -447,9 +448,7 @@ exports.checkinStats = async (req, res, next) => {
 exports.checkin = async (req, res, next) => {
   try {
     const ev = await svc.getEvent();
-    let raw = String(req.body?.code || '').trim();
-    if (raw.toUpperCase().startsWith('MIAWEZON:')) raw = raw.slice(9);
-    raw = raw.trim().toUpperCase();
+    const raw = parseScanned(req.body?.code);
     if (!raw) return res.status(400).json({ result: 'invalid', message: 'Code vide' });
 
     const byCode = { event: ev._id, $or: [{ code: raw }, { number: raw }] };

@@ -33,6 +33,7 @@ const withProof = (req, res, next) => proofUpload.single('receipt')(req, res, (e
 });
 
 const orderLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
+const verifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false });
 const waitlistLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 
 // ── Public ──
@@ -40,6 +41,7 @@ router.get('/event', pub.getEvent);
 router.post('/waitlist', waitlistLimiter, pub.joinWaitlist);
 router.post('/orders', orderLimiter, pub.createOrder);
 router.get('/orders/:id', pub.getOrder);
+router.get('/verify/:code', verifyLimiter, pub.verifyTicket);
 router.post('/orders/:id/confirm', orderLimiter, pub.confirmOrder);
 router.post('/orders/:id/cancel', pub.cancelPending);
 router.get('/orders/:id/tickets.pdf', pub.downloadPdf);

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// Un billet nominatif. Le QR code contient `MIAWEZON:<code>`.
+// Un billet nominatif. Le QR code contient le lien <site>/miawezon/billet/<code>.
 const ticketSchema = new mongoose.Schema({
   event: { type: mongoose.Schema.Types.ObjectId, ref: 'TicketEvent', required: true },
   order: { type: mongoose.Schema.Types.ObjectId, ref: 'TicketOrder', required: true, index: true },

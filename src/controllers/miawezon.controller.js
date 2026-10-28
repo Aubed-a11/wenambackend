@@ -5,7 +5,7 @@ const Ticket = require('../models/Ticket');
 const TicketWaitlist = require('../models/TicketWaitlist');
 const svc = require('../services/miawezon.service');
 const ycp = require('../services/youcanpay');
-const { qrDataUrl, ticketsPdf, ticketFields } = require('../services/ticketDocs');
+const { qrDataUrl, ticketsPdf, ticketFields, parseScanned } = require('../services/ticketDocs');
 const fs = require('fs');
 const { sendTicketsEmail, sendTransferInstructions, sendProofReceived, sendAdminProofNotice } = require('../services/ticketMail');
 
@@ -426,3 +426,28 @@ exports.PROOF_PATH = PROOF_PATH;
 exports.approveTransfer = approveTransfer;
 exports.finalizePayment = finalizePayment;
 exports.orderPayload = orderPayload;
+
+// Page publique d'un billet (ouverte en scannant son QR code avec n'importe quel telephone).
+// Le code est secret et non devinable ; on n'expose ni e-mail ni telephone.
+exports.verifyTicket = async (req, res, next) => {
+  try {
+    const code = parseScanned(req.params.code);
+    if (!/^[A-Z0-9]{6,32}$/.test(code)) return res.status(404).json({ message: 'Billet introuvable', code: 'NOT_FOUND' });
+    const ticket = await Ticket.findOne({ code });
+    if (!ticket) return res.status(404).json({ message: 'Billet introuvable', code: 'NOT_FOUND' });
+    const order = await TicketOrder.findById(ticket.order).select('orderNumber lang items status');
+    const ev = await svc.getEvent();
+    res.json({
+      ticket: {
+        number: ticket.number,
+        holderName: ticket.holderName,
+        categoryCode: ticket.categoryCode,
+        categoryName: ticket.categoryName,
+        status: ticket.status,
+        checkedInAt: ticket.checkedInAt || null,
+        fields: order ? ticketFields({ ticket, order, event: ev }) : {},
+      },
+      event: svc.publicEvent(ev),
+    });
+  } catch (err) { next(err); }
+};
