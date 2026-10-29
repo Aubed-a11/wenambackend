@@ -38,6 +38,7 @@ const waitlistLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, standardH
 
 // ── Public ──
 router.get('/event', pub.getEvent);
+router.get('/menu/:tier.pdf', pub.menuPdf);
 router.post('/waitlist', waitlistLimiter, pub.joinWaitlist);
 router.post('/orders', orderLimiter, pub.createOrder);
 router.get('/orders/:id', pub.getOrder);

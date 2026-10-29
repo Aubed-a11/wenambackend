@@ -6,6 +6,7 @@ const TicketWaitlist = require('../models/TicketWaitlist');
 const svc = require('../services/miawezon.service');
 const ycp = require('../services/youcanpay');
 const { qrDataUrl, ticketsPdf, ticketFields, parseScanned } = require('../services/ticketDocs');
+const { menuPdf, MENU_TIERS } = require('../services/menuDocs');
 const fs = require('fs');
 const { sendTicketsEmail, sendTransferInstructions, sendProofReceived, sendAdminProofNotice } = require('../services/ticketMail');
 
@@ -313,6 +314,26 @@ exports.downloadPdf = async (req, res, next) => {
     const pdf = await ticketsPdf({ order, tickets, event: ev });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `${req.query.inline ? 'inline' : 'attachment'}; filename="Billets-MIAWEZON-${order.orderNumber}.pdf"`);
+    res.send(pdf);
+  } catch (err) { next(err); }
+};
+
+// Carte menu d'une formule en PDF (modele ZINLI ou AGBADJA rempli avec le menu de l'admin)
+exports.menuPdf = async (req, res, next) => {
+  try {
+    const tier = String(req.params.tier || '').toUpperCase();
+    if (!MENU_TIERS.includes(tier)) return res.status(404).json({ message: 'Menu introuvable' });
+    const ev = await svc.getEvent();
+    if (!ev.published) {
+      const user = await optionalUser(req);
+      if (user?.role !== 'admin') return res.status(404).json({ message: 'Menu indisponible' });
+    }
+    const cats = await svc.getCategories(ev._id);
+    const category = cats.find((c) => c.code === tier) || null;
+    const lang = req.query.lang === 'en' ? 'en' : 'fr';
+    const pdf = await menuPdf({ tier, event: ev, category, lang });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `${req.query.inline ? 'inline' : 'attachment'}; filename="Menu-MIAWEZON-${tier}.pdf"`);
     res.send(pdf);
   } catch (err) { next(err); }
 };

@@ -106,6 +106,8 @@ Images provisoires dans `public/images/miawezon/`, à remplacer en gardant les m
 
 Billets : les modèles fournis sont dans `public/images/miawezon/ticket-zinli.jpg` et `ticket-agbadja.jpg` (front) et `src/assets/tickets/` (backend). Le système y écrit le prix, la date, le lieu, le n° de billet, le nom, le QR code, le logo MIAWÉZON et le n° d'achat. Les positions sont dans `layout.json` (backend) et `src/data/ticketLayout.json` (front), à garder identiques.
 
+Cartes menu : les modèles fournis sont dans `public/images/miawezon/menu-zinli.jpg` et `menu-agbadja.jpg` (front) et `src/assets/menus/` (backend). Le système y écrit le logo, la formule, le prix, les plats du menu de l'admin (Admin > MIAWÉZON > Menu du buffet), le slogan, la date et le lieu, en réduisant la taille du texte si le menu est long. Zones dans `menus/layout.json` (backend) et `src/data/menuLayout.json` (front), à garder identiques. PDF : `/api/miawezon/menu/ZINLI.pdf` ou `AGBADJA.pdf` (`?lang=en` pour l'anglais), bouton « Télécharger le menu » sur /miawezon/menu.
+
 Vidéo de présentation optionnelle : renseigner `conceptVideo` dans `src/data/miawezon.js`.
 
 ## 5. Pages
