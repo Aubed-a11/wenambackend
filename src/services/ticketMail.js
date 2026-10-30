@@ -15,6 +15,13 @@ const LOGO = path.join(__dirname, '../assets/miawezon-logo-light.png');
 const LOGO_CID = 'miawezon-logo';
 
 const fromEmail = () => process.env.MIAWEZON_FROM_EMAIL || 'contact@wenamfood.com';
+// Copie cachee de chaque courriel client (l'envoi SMTP ne range rien dans "Envoyes").
+// MIAWEZON_BCC=adresse pour changer, MIAWEZON_BCC=none pour desactiver.
+const bccFor = (to) => {
+  const v = (process.env.MIAWEZON_BCC || fromEmail()).trim();
+  if (!v || v.toLowerCase() === 'none' || v.toLowerCase() === String(to || '').toLowerCase()) return undefined;
+  return v;
+};
 const fromName = () => process.env.MIAWEZON_FROM_NAME || 'MIAWÉZON';
 
 let transporter = null;
@@ -134,6 +141,7 @@ async function sendTicketsEmail({ order, tickets, event, token }) {
     from: `"${fromName()}" <${fromEmail()}>`,
     replyTo: fromEmail(),
     to: order.buyer.email,
+    bcc: bccFor(order.buyer.email),
     subject: m.subject(order.orderNumber),
     html,
     attachments: [
@@ -236,6 +244,7 @@ async function send(to, subject, inner, m, extra = []) {
     from: `"${fromName()}" <${fromEmail()}>`,
     replyTo: fromEmail(),
     to,
+    bcc: bccFor(to),
     subject,
     html: layout(inner, m),
     attachments: [logoAttachment(), ...extra],
