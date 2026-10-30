@@ -148,7 +148,7 @@ async function ticketsPdf({ order, tickets, event }) {
     const pad = q.pad || 0;
     if (q.bg) doc.roundedRect(q.x * s, q.y * s, q.size * s, q.size * s, (q.radius || 0) * s).fill(q.bg);
     doc.image(qr, (q.x + pad) * s, (q.y + pad) * s, { width: (q.size - 2 * pad) * s, height: (q.size - 2 * pad) * s });
-    if (hasLogo) {
+    if (hasLogo && L.logo) {
       const g = L.logo;
       // Logo dore sur un badge sombre pour rester lisible sur le talon dore
       if (g.bg) doc.roundedRect(g.x * s, g.y * s, g.w * s, g.h * s, (g.radius || 0) * s).fill(g.bg);
