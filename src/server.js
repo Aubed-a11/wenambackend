@@ -13,11 +13,11 @@ connectDB().then(async () => {
   const miawezon = require('./services/miawezon.service');
   await miawezon.getEvent().catch((e) => console.error('MIAWEZON init:', e.message));
   miawezon.startSweeper();
+  require('./services/miawezonReminders').startReminders();
 
   server.listen(PORT, () => {
     console.log(`🚀 Wénam Server démarré sur http://localhost:${PORT}`);
     console.log(`📡 Socket.io prêt`);
-    console.log(`🔑 Admin: admin@wenam.ma / Admin@2025`);
     console.log(`🌐 Frontend: http://localhost:5173`);
   });
 }).catch(err => {

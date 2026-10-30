@@ -250,6 +250,7 @@ async function createOrder({ ev, items, buyer, holders, lang, userId }) {
         quantity,
         total,
         expiresAt: new Date(Date.now() + holdMs(ev)),
+        payment: { provider: ev.paymentMode === 'youcanpay' ? 'youcanpay' : 'transfer' },
         user: userId || null,
       });
       order.accessToken = accessToken;

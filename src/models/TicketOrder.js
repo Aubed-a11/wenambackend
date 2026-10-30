@@ -68,6 +68,11 @@ const ticketOrderSchema = new mongoose.Schema({
   rejectionReason: { type: String, default: '' },
 
   emailSentAt: Date,
+  // Rappels automatiques deja envoyes (un seul de chaque)
+  reminderSentAt: Date,
+  expiredNoticeAt: Date,
+  adminRemindedAt: Date,
+  eveReminderSentAt: Date,
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true });
 

@@ -97,7 +97,7 @@ La billetterie s'ouvre toute seule à la date prévue (mode « Automatique »). 
 
 Textes, menus ZINLI et AGBADJA (cartes sans photos, un plat marqué `only: 'AGBADJA'` n'apparaît que dans ce menu), prestations des billets, galerie : `src/data/miawezon.js` (front).
 
-Images provisoires dans `public/images/miawezon/`, à remplacer en gardant les mêmes noms :
+Visuels dans `public/images/miawezon/` (créés à partir du logo et des photos du restaurant), remplaçables en gardant les mêmes noms :
 
 - `logo.png` (logo MIAWÉZON, PNG transparent)
 - `hero.jpg` (fond de la page événement, format large)
@@ -133,3 +133,12 @@ Admin :
 - le client reçoit un e-mail avec les billets en PDF (au format des modèles) et un lien privé vers ses billets
 
 À savoir : l'annulation d'une commande payée ne rembourse pas automatiquement, le remboursement se fait par virement retour (ou depuis YouCan Pay en mode carte).
+
+## 7. Courriels automatiques
+
+Le serveur vérifie toutes les 5 minutes et envoie, une seule fois par commande :
+
+- au client, quelques heures avant l'expiration de sa réservation (6 h pour un délai de 24 h) s'il n'a pas encore envoyé son reçu : rappel avec le montant, le motif, les RIB et un bouton pour envoyer le reçu
+- au client, quand sa réservation expire : ses places sont remises en vente, avec un lien pour réserver à nouveau
+- à l'équipe (`MIAWEZON_ADMIN_EMAIL`, sinon contact@wenamfood.com), quand des reçus attendent une validation depuis plus que le délai de validation des réglages : un récapitulatif avec les liens vers chaque commande
+- à tous les acheteurs, dans les 24 heures avant l'événement (selon la date et l'heure des réglages) : date, heure, lieu et lien vers leurs billets

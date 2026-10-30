@@ -323,4 +323,121 @@ async function sendAdminProofNotice({ order, proofPath, proofName, proofMime }) 
   return send(to, `Reçu à valider : ${order.orderNumber} (${order.buyer.name})`, inner, m, extra);
 }
 
-module.exports = { sendTicketsEmail, sendWaitlistEmail, ticketsLink, sendTransferInstructions, sendProofReceived, sendRejected, sendAdminProofNotice };
+// ─── Rappels automatiques ────────────────────────────────────────────────────
+
+const R = {
+  fr: {
+    holdSubject: (n) => `MIAWÉZON : votre réservation ${n} expire bientôt`,
+    holdTitle: 'Votre réservation expire bientôt',
+    hold: (d) => `Nous n'avons pas encore reçu le reçu de votre virement. Vos places restent réservées jusqu'au <strong>${d}</strong>. Passé ce délai, elles seront remises en vente.`,
+    holdHelp: 'Déjà fait le virement ? Il suffit d\'ajouter votre reçu (PDF ou photo) en cliquant ci-dessous.',
+    holdBtn: 'Envoyer mon reçu',
+    expSubject: (n) => `MIAWÉZON : votre réservation ${n} a expiré`,
+    expTitle: 'Votre réservation a expiré',
+    exp: 'Nous n\'avons pas reçu le reçu de votre virement dans le délai prévu. Vos places ont donc été remises en vente.',
+    expHelp: 'Vous avez fait le virement ? Répondez à ce courriel avec votre reçu, nous vérifierons votre situation. Sinon, vous pouvez réserver à nouveau, dans la limite des places disponibles.',
+    expBtn: 'Réserver à nouveau',
+    eveSubject: 'MIAWÉZON, c\'est demain !',
+    eveTitle: 'C\'est demain !',
+    eve: 'Nous avons hâte de vous accueillir à MIAWÉZON. Voici le rappel des informations pratiques :',
+    eveKeep: 'Pensez à présenter le QR code de chaque billet à l\'entrée, sur votre téléphone ou imprimé.',
+    eveBtn: 'Voir mes billets',
+  },
+  en: {
+    holdSubject: (n) => `MIAWÉZON: your booking ${n} expires soon`,
+    holdTitle: 'Your booking expires soon',
+    hold: (d) => `We have not received your transfer receipt yet. Your seats remain booked until <strong>${d}</strong>. After that, they will be released.`,
+    holdHelp: 'Already made the transfer? Just upload your receipt (PDF or photo) using the button below.',
+    holdBtn: 'Upload my receipt',
+    expSubject: (n) => `MIAWÉZON: your booking ${n} has expired`,
+    expTitle: 'Your booking has expired',
+    exp: 'We did not receive your transfer receipt in time, so your seats have been released.',
+    expHelp: 'Did you make the transfer? Reply to this email with your receipt and we will look into it. Otherwise, you can book again, subject to availability.',
+    expBtn: 'Book again',
+    eveSubject: 'MIAWÉZON is tomorrow!',
+    eveTitle: 'See you tomorrow!',
+    eve: 'We look forward to welcoming you to MIAWÉZON. Here is a reminder of the practical details:',
+    eveKeep: 'Remember to show the QR code of each ticket at the entrance, on your phone or printed.',
+    eveBtn: 'View my tickets',
+  },
+};
+
+const btn = (href, label) => `<p style="text-align:center;margin:26px 0"><a href="${href}" style="display:inline-block;background:#C4531A;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${label}</a></p>`;
+const title = (txt) => `<p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${txt}</p>`;
+
+// Rappel au client : reçu non envoye, reservation bientot expiree
+async function sendHoldReminder({ order, event, token }) {
+  const lang = order.lang === 'en' ? 'en' : 'fr';
+  const m = M[lang]; const v = V[lang]; const r = R[lang];
+  const accounts = (event.bankAccounts || []).filter((b) => b && (b.rib || b.iban));
+  const inner = `
+    ${title(r.holdTitle)}
+    <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 14px">${r.hold(fmtDateTime(order.expiresAt, lang))}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 18px">
+      <tr><td style="padding:6px 0;color:#5C3D11">${v.amount}</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#C4531A;font-size:18px">${fmtPrice(order.total)}</td></tr>
+      <tr><td style="padding:6px 0;color:#5C3D11">${v.motive}</td><td style="padding:6px 0;text-align:right;font-weight:700;font-family:Consolas,monospace">${esc(order.orderNumber)}</td></tr>
+    </table>
+    <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#8B6B3D;margin:0 0 8px">${v.accounts}</p>
+    ${accountsHtml(accounts, v)}
+    <p style="font-size:14px;line-height:1.6;margin:16px 0 0">${r.holdHelp}</p>
+    ${btn(resumeLink(order, token), r.holdBtn)}
+    <p style="font-size:14px;margin:0">${m.team}</p>`;
+  return send(order.buyer.email, r.holdSubject(order.orderNumber), inner, m);
+}
+
+// Reservation expiree : places remises en vente
+async function sendExpiredNotice({ order }) {
+  const lang = order.lang === 'en' ? 'en' : 'fr';
+  const m = M[lang]; const r = R[lang];
+  const inner = `
+    ${title(r.expTitle)}
+    <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 14px">${r.exp}</p>
+    <p style="font-size:13px;color:#8B6B3D;margin:0 0 14px">${V[lang].motive} : <strong>${esc(order.orderNumber)}</strong> · ${fmtPrice(order.total)}</p>
+    <p style="font-size:14px;line-height:1.6;margin:0">${r.expHelp}</p>
+    ${btn(`${frontUrl()}/miawezon#billetterie`, r.expBtn)}
+    <p style="font-size:14px;margin:0">${m.team}</p>`;
+  return send(order.buyer.email, r.expSubject(order.orderNumber), inner, m);
+}
+
+// Rappel la veille de l'evenement
+async function sendEveReminder({ order, event, token }) {
+  const lang = order.lang === 'en' ? 'en' : 'fr';
+  const m = M[lang]; const r = R[lang]; const t = T[lang];
+  const tickets = order.items.map((i) => `${esc(i.name)} x ${i.quantity}`).join(', ');
+  const inner = `
+    ${title(r.eveTitle)}
+    <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
+    <p style="font-size:15px;line-height:1.6;margin:0 0 16px">${r.eve}</p>
+    <table style="width:100%;font-size:14px;margin:0 0 16px;color:#5C3D11;border-collapse:collapse">
+      <tr><td style="padding:5px 0">${t.date}</td><td style="text-align:right;font-weight:700">${esc(eventDateText(event, lang, t))}</td></tr>
+      <tr><td style="padding:5px 0">${t.time}</td><td style="text-align:right;font-weight:700">${esc(labelOr(event.eventTimeLabel, lang, t.tbc))}</td></tr>
+      <tr><td style="padding:5px 0">${t.venue}</td><td style="text-align:right;font-weight:700">${esc(labelOr(event.venue, lang, t.tbc))}</td></tr>
+      ${event.venueAddress ? `<tr><td></td><td style="text-align:right;font-size:13px">${esc(event.venueAddress)}</td></tr>` : ''}
+      <tr><td style="padding:5px 0">${t.order}</td><td style="text-align:right">${esc(order.orderNumber)} · ${tickets}</td></tr>
+    </table>
+    <p style="font-size:14px;line-height:1.6;margin:0">${r.eveKeep}</p>
+    ${btn(ticketsLink(order, token), r.eveBtn)}
+    <p style="font-size:14px;margin:0">${m.team}</p>`;
+  return send(order.buyer.email, r.eveSubject, inner, m);
+}
+
+// Rappel a l'equipe : reçus en attente de validation depuis trop longtemps
+async function sendAdminPendingDigest({ orders, hours }) {
+  const to = process.env.MIAWEZON_ADMIN_EMAIL || fromEmail();
+  const rows = orders.map((o) => `
+      <tr>
+        <td style="padding:6px 0;border-bottom:1px solid #EDE0C4"><a href="${frontUrl()}/admin/miawezon?commande=${o._id}" style="color:#8B3A0F;font-weight:700;text-decoration:none">${esc(o.orderNumber)}</a></td>
+        <td style="padding:6px 0;border-bottom:1px solid #EDE0C4">${esc(o.buyer.name)}</td>
+        <td style="padding:6px 0;border-bottom:1px solid #EDE0C4;text-align:right">${fmtPrice(o.total)}</td>
+      </tr>`).join('');
+  const inner = `
+    ${title(orders.length > 1 ? `${orders.length} reçus attendent votre validation` : 'Un reçu attend votre validation')}
+    <p style="font-size:15px;line-height:1.6;margin:0 0 16px">Ces reçus de virement ont été envoyés il y a plus de ${hours} heures. Les clients attendent leurs billets.</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">${rows}</table>
+    ${btn(`${frontUrl()}/admin/miawezon`, 'Ouvrir le tableau de bord')}`;
+  return send(to, orders.length > 1 ? `Rappel : ${orders.length} reçus à valider` : `Rappel : reçu à valider (${orders[0].orderNumber})`, inner, M.fr);
+}
+
+module.exports = { sendTicketsEmail, sendWaitlistEmail, ticketsLink, sendTransferInstructions, sendProofReceived, sendRejected, sendAdminProofNotice, sendHoldReminder, sendExpiredNotice, sendEveReminder, sendAdminPendingDigest };
