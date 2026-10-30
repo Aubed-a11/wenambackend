@@ -15,10 +15,10 @@ const LOGO = path.join(__dirname, '../assets/miawezon-logo-light.png');
 const LOGO_CID = 'miawezon-logo';
 
 const fromEmail = () => process.env.MIAWEZON_FROM_EMAIL || 'contact@wenamfood.com';
-// Copie cachee de chaque courriel client (l'envoi SMTP ne range rien dans "Envoyes").
-// MIAWEZON_BCC=adresse pour changer, MIAWEZON_BCC=none pour desactiver.
+// Copie cachee des courriels clients : desactivee par defaut.
+// MIAWEZON_BCC=adresse pour recevoir une copie de chaque courriel envoye aux clients.
 const bccFor = (to) => {
-  const v = (process.env.MIAWEZON_BCC || fromEmail()).trim();
+  const v = (process.env.MIAWEZON_BCC || '').trim();
   if (!v || v.toLowerCase() === 'none' || v.toLowerCase() === String(to || '').toLowerCase()) return undefined;
   return v;
 };
