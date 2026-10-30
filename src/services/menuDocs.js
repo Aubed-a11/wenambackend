@@ -12,7 +12,7 @@ const LOGOS = {
   dark: path.join(ASSETS, 'miawezon-logo-dark.png'),
   gold: path.join(ASSETS, 'miawezon-logo-gold.png'),
 };
-const LOGO_RATIO = 900 / 222;
+const LOGO_RATIO = 900 / 658;
 const FONTS = {
   'pf-600': 'playfair-display-latin-600-normal.woff',
   'pf-700': 'playfair-display-latin-700-normal.woff',
@@ -38,7 +38,7 @@ const M = {
 
 // Tailles de base (pixels du modele 1024 px de large), reduites ou agrandies pour remplir le cadre
 const S = {
-  logo: 84, gLogo: 16,
+  logo: 150, gLogo: 16,
   label: 15, labelSp: 6, gLabel: 6,
   tier: 74, tierSp: 3, gTier: 8,
   cat: 16, gCat: 20,
