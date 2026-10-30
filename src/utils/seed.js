@@ -49,21 +49,20 @@ const menuData = [
 
 const seedAdmin = async () => {
   try {
-    const exists = await User.findOne({ email: 'admin@wenam.ma' })
+    const email = (process.env.ADMIN_EMAIL || 'admin@wenam.ma').toLowerCase()
+    const exists = await User.findOne({ email })
     if (!exists) {
+      // Premier demarrage : mot de passe pris dans ADMIN_PASSWORD, sinon genere au hasard
+      const password = process.env.ADMIN_PASSWORD || require('crypto').randomBytes(9).toString('base64url')
       await User.create({
         name: 'Samuelle KAKPO',
-        email: 'admin@wenam.ma',
-        password: 'Admin@2025',
+        email,
+        password,
         role: 'admin',
         phone: '+212 643 389 585',
         address: { street: 'Avenue Al Majd 2', city: 'Rabat' }
       })
-      console.log('✅ Admin créé: admin@wenam.ma / Admin@2025')
-    } else {
-      // Update name if already exists
-      await User.findOneAndUpdate({ email: 'admin@wenam.ma' }, { name: 'Samuelle KAKPO' })
-      console.log('✅ Admin mis à jour: Samuelle KAKPO')
+      console.log(`Admin cree : ${email}${process.env.ADMIN_PASSWORD ? '' : ` (mot de passe provisoire : ${password}, a changer avec scripts/admin-password.js)`}`)
     }
   } catch (err) { console.error('Seed admin error:', err.message) }
 }

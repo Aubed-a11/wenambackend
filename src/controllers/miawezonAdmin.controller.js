@@ -11,6 +11,11 @@ const fs = require('fs');
 const { finalizePayment, orderPayload, approveTransfer, PROOF_PATH } = require('./miawezon.controller');
 const { sendRejected } = require('../services/ticketMail');
 
+// Heure du scan : maintenant, ou l'heure enregistree hors ligne (3 jours maximum)
+const scanTime = (v) => {
+  const d = v ? new Date(v) : null;
+  return d && !Number.isNaN(d.getTime()) && d <= new Date() && Date.now() - d.getTime() < 3 * 86400000 ? d : new Date();
+};
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const csvCell = (v) => {
   const s = v == null ? '' : String(v);
@@ -458,7 +463,7 @@ exports.checkin = async (req, res, next) => {
     if (!dryRun) {
       ticket = await Ticket.findOneAndUpdate(
         { ...byCode, status: 'valid' },
-        { status: 'used', checkedInAt: new Date(), checkedInBy: req.user._id },
+        { status: 'used', checkedInAt: scanTime(req.body?.offlineAt), checkedInBy: req.user._id },
         { new: true }
       );
     }
@@ -483,5 +488,51 @@ exports.checkin = async (req, res, next) => {
       } : null,
       ...counts,
     });
+  } catch (err) { next(err); }
+};
+
+// ─── Liste des participants (impression, export, scanner hors ligne) ─────────
+async function participantRows(ev, { withCodes = false } = {}) {
+  const tickets = await Ticket.find({ event: ev._id, status: { $ne: 'cancelled' } }).sort({ categoryCode: 1, holderName: 1 }).lean();
+  const orders = await TicketOrder.find({ _id: { $in: [...new Set(tickets.map((t) => String(t.order)))] } }).select('orderNumber buyer status').lean();
+  const byId = new Map(orders.map((o) => [String(o._id), o]));
+  return tickets
+    .filter((t) => byId.get(String(t.order))?.status === 'paid')
+    .map((t) => {
+      const o = byId.get(String(t.order));
+      return {
+        number: t.number,
+        holderName: t.holderName,
+        categoryCode: t.categoryCode,
+        categoryName: t.categoryName,
+        status: t.status,
+        checkedInAt: t.checkedInAt || null,
+        orderNumber: o.orderNumber,
+        buyerName: o.buyer?.name || '',
+        buyerPhone: o.buyer?.phone || '',
+        ...(withCodes ? { code: t.code } : {}),
+      };
+    });
+}
+
+exports.listParticipants = async (req, res, next) => {
+  try {
+    const ev = await svc.getEvent();
+    const tickets = await participantRows(ev, { withCodes: req.query.codes === '1' });
+    res.json({ tickets, generatedAt: new Date() });
+  } catch (err) { next(err); }
+};
+
+exports.exportParticipants = async (req, res, next) => {
+  try {
+    const ev = await svc.getEvent();
+    const rows = await participantRows(ev);
+    const csv = toCsv([
+      ['Billet', 'Nom sur le billet', 'Formule', 'Commande', 'Acheteur', 'Téléphone', 'Entrée'],
+      ...rows.map((r) => [r.number, r.holderName, r.categoryCode, r.orderNumber, r.buyerName, r.buyerPhone, r.status === 'used' ? fmtDate(r.checkedInAt) : '']),
+    ]);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="MIAWEZON-participants.csv"');
+    res.send(csv);
   } catch (err) { next(err); }
 };

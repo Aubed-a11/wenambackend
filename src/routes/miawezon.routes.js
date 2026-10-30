@@ -72,5 +72,7 @@ router.get('/admin/waitlist', a, admin.listWaitlist);
 router.post('/admin/waitlist/notify', a, admin.notifyWaitlist);
 router.get('/admin/checkin', a, admin.checkinStats);
 router.post('/admin/checkin', a, admin.checkin);
+router.get('/admin/participants', a, admin.listParticipants);
+router.get('/admin/participants.csv', a, admin.exportParticipants);
 
 module.exports = router;

@@ -1,6 +1,21 @@
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
 let io;
+
+// Utilisateur du jeton (envoye a la connexion dans auth.token, ou avec l'evenement)
+async function userFrom(socket, token) {
+  const t = (typeof token === 'string' && token) || socket.handshake.auth?.token;
+  if (!t) return null;
+  try {
+    const decoded = jwt.verify(t, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).select('role isActive');
+    return user && user.isActive ? user : null;
+  } catch {
+    return null;
+  }
+}
 
 const initSocket = (server) => {
   io = new Server(server, {
@@ -8,22 +23,18 @@ const initSocket = (server) => {
   });
 
   io.on('connection', (socket) => {
-    console.log(`🔌 Socket connecté: ${socket.id}`);
-
-    socket.on('join_room', (userId) => {
-      if (userId) {
-        socket.join(`user_${userId}`);
-        socket.join('admins');
-        console.log(`👤 User ${userId} rejoint sa room`);
-      }
+    // Suivi de ses propres commandes : la salle est celle de l'utilisateur du jeton
+    socket.on('join_room', async (_userId, token) => {
+      const user = await userFrom(socket, token);
+      if (!user) return;
+      socket.join(`user_${user._id}`);
+      if (user.role === 'admin') socket.join('admins');
     });
 
-    socket.on('join_admin', () => {
-      socket.join('admins');
-    });
-
-    socket.on('disconnect', () => {
-      console.log(`🔌 Socket déconnecté: ${socket.id}`);
+    // Alertes de l'equipe (nouvelles commandes, reçus MIAWEZON) : admins connectes uniquement
+    socket.on('join_admin', async (token) => {
+      const user = await userFrom(socket, token);
+      if (user?.role === 'admin') socket.join('admins');
     });
   });
 
