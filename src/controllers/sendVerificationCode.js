@@ -71,7 +71,7 @@ exports.sendVerificationCode = async (req, res) => {
       subject: 'Votre code de confirmation Wênam',
       html: `
         <div style="font-family:Lato,Arial,sans-serif;max-width:480px;margin:0 auto;background:#FAF3E8;border-radius:16px;overflow:hidden;">
-          <div style="background:#946420;padding:28px 32px;text-align:center;">
+          <div style="background:#C4531A;padding:28px 32px;text-align:center;">
             <img src="https://www.wenamfood.com/images/wenam-logo.png" alt="Wênam"
               width="80" height="80"
               style="display:block;margin:0 auto 12px;object-fit:contain;border-radius:12px;background:#fff;padding:6px;" />
@@ -82,7 +82,7 @@ exports.sendVerificationCode = async (req, res) => {
             <p style="font-size:16px;color:#1A0F00;margin:0 0 6px;">Bonjour <strong>${name || ''}</strong>,</p>
             <p style="font-size:15px;color:#1A0F00;margin:0 0 24px;">Voici votre code de confirmation :</p>
             <div style="display:inline-block;background:#fff;border:2px solid #D4B896;border-radius:14px;padding:18px 36px;margin:0 0 24px;">
-              <span style="font-size:38px;font-weight:700;letter-spacing:10px;color:#946420;">${code}</span>
+              <span style="font-size:38px;font-weight:700;letter-spacing:10px;color:#C4531A;">${code}</span>
             </div>
             <p style="font-size:13px;color:#8B6B3D;margin:0;">Ce code expire dans <strong>15 minutes</strong>.</p>
             <p style="font-size:13px;color:#8B6B3D;margin:10px 0 0;">Si vous n&apos;avez pas demandé ce code, ignorez cet email.</p>

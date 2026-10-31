@@ -4,7 +4,7 @@
     "image": "zinli.jpg", "width": 1024, "height": 1536, "logo": "dark",
     "panel": { "x": 73, "y": 187, "w": 930, "h": 1143, "padX": 64, "padY": 50 },
     "footer": { "x": 250, "y": 1352, "w": 524, "h": 174 },
-    "theme": { "title": "#3B2410", "text": "#2A1606", "muted": "#8B6B3D", "accent": "#946420", "rule": "#C9A15A", "badgeBg": "#3B2410", "badgeText": "#FFF8EC" }
+    "theme": { "title": "#8B3A0F", "text": "#2A1606", "muted": "#8B6B3D", "accent": "#B5651D", "rule": "#C9A15A", "badgeBg": "#8B3A0F", "badgeText": "#FFF8EC" }
   },
   "AGBADJA": {
     "image": "agbadja.jpg", "width": 1024, "height": 1536, "logo": "gold",

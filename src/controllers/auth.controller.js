@@ -17,14 +17,14 @@ const sendResetEmail = async (to, code) => {
     subject: 'Reinitialisation de votre mot de passe - Wenam',
     html: `
       <div style="font-family:Lato,Arial,sans-serif;max-width:480px;margin:auto;background:#FAF3E8;border-radius:16px;overflow:hidden">
-        <div style="background:#946420;padding:28px 32px;text-align:center">
+        <div style="background:#C4531A;padding:28px 32px;text-align:center">
           <p style="font-family:Georgia,serif;font-size:28px;font-weight:700;color:#fff;margin:0">Wenam</p>
           <p style="font-family:Georgia,serif;font-size:13px;font-style:italic;color:rgba(255,255,255,0.8);margin:4px 0 0">Cuisine africaine facon Benin</p>
         </div>
         <div style="padding:36px 32px;text-align:center">
           <p style="font-size:16px;color:#1A0F00;margin:0 0 8px">Voici votre code de reinitialisation :</p>
           <div style="display:inline-block;background:#fff;border:2px solid #D4B896;border-radius:14px;padding:18px 36px;margin:16px 0">
-            <span style="font-size:38px;font-weight:700;letter-spacing:10px;color:#946420">${code}</span>
+            <span style="font-size:38px;font-weight:700;letter-spacing:10px;color:#C4531A">${code}</span>
           </div>
           <p style="font-size:13px;color:#8B6B3D;margin:16px 0 0">Ce code expire dans <strong>1 heure</strong>.</p>
           <p style="font-size:13px;color:#8B6B3D;margin:8px 0 0">Si vous n avez pas fait cette demande, ignorez cet email.</p>
