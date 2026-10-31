@@ -12,7 +12,7 @@ const LOGOS = {
   dark: path.join(ASSETS, 'miawezon-logo-dark.png'),
   gold: path.join(ASSETS, 'miawezon-logo-gold.png'),
 };
-const LOGO_RATIO = 900 / 222;
+const LOGO_RATIO = 4; // logo 1200 x 300
 const FONTS = {
   'pf-600': 'playfair-display-latin-600-normal.woff',
   'pf-700': 'playfair-display-latin-700-normal.woff',

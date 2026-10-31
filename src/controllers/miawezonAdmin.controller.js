@@ -436,11 +436,13 @@ exports.notifyWaitlist = async (req, res, next) => {
 // ─── Controle des billets (jour J) ───────────────────────────────────────────
 
 async function checkinCounts(eventId) {
-  const [total, used] = await Promise.all([
+  const [total, used, out] = await Promise.all([
     Ticket.countDocuments({ event: eventId, status: { $ne: 'cancelled' } }),
     Ticket.countDocuments({ event: eventId, status: 'used' }),
+    Ticket.countDocuments({ event: eventId, status: 'used', outAt: { $ne: null } }),
   ]);
-  return { total, checkedIn: used };
+  // checkedIn : billets deja entres au moins une fois ; inside : presents en ce moment
+  return { total, checkedIn: used, inside: used - out, out };
 }
 
 exports.checkinStats = async (req, res, next) => {
@@ -450,41 +452,66 @@ exports.checkinStats = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// Controle a l'entree et a la sortie.
+//  mode 'in'  (defaut) : premiere entree, ou retour d'une personne sortie (scan Sortie fait avant)
+//  mode 'out'          : enregistre la sortie d'une personne deja entree
+//  force: true         : autorise le retour d'un billet deja entre sans scan de sortie (decision du controleur)
 exports.checkin = async (req, res, next) => {
   try {
     const ev = await svc.getEvent();
     const raw = parseScanned(req.body?.code);
     if (!raw) return res.status(400).json({ result: 'invalid', message: 'Code vide' });
-
+    const mode = req.body?.mode === 'out' ? 'out' : 'in';
+    const force = req.body?.force === true;
+    const at = scanTime(req.body?.offlineAt);
     const byCode = { event: ev._id, $or: [{ code: raw }, { number: raw }] };
     const dryRun = req.body?.dryRun === true;
 
     let ticket = null;
-    if (!dryRun) {
-      ticket = await Ticket.findOneAndUpdate(
-        { ...byCode, status: 'valid' },
-        { status: 'used', checkedInAt: scanTime(req.body?.offlineAt), checkedInBy: req.user._id },
-        { new: true }
-      );
-    }
-    let result = 'valid';
-    if (!ticket) {
-      ticket = await Ticket.findOne(byCode);
-      if (!ticket) result = 'invalid';
-      else if (ticket.status === 'used') result = 'already_used';
-      else if (ticket.status === 'cancelled') result = 'cancelled';
-      else result = dryRun ? 'valid' : 'invalid';
+    let result;
+    if (mode === 'in') {
+      if (!dryRun) {
+        // 1. premiere entree
+        ticket = await Ticket.findOneAndUpdate({ ...byCode, status: 'valid' }, { status: 'used', checkedInAt: at, checkedInBy: req.user._id, outAt: null }, { new: true });
+        if (ticket) result = 'valid';
+        // 2. retour apres une sortie enregistree (ou retour force)
+        if (!ticket) {
+          const filter = force ? { ...byCode, status: 'used' } : { ...byCode, status: 'used', outAt: { $ne: null } };
+          ticket = await Ticket.findOneAndUpdate(filter, { $set: { outAt: null, lastReentryAt: at }, $inc: { reentries: 1 } }, { new: true });
+          if (ticket) result = force ? 'reentry_forced' : 'reentry';
+        }
+      }
+      if (!ticket) {
+        ticket = await Ticket.findOne(byCode);
+        if (!ticket) result = 'invalid';
+        else if (ticket.status === 'used') result = 'already_used';
+        else if (ticket.status === 'cancelled') result = 'cancelled';
+        else result = dryRun ? 'valid' : 'invalid';
+      }
+    } else {
+      ticket = await Ticket.findOneAndUpdate({ ...byCode, status: 'used', outAt: null }, { $set: { outAt: at }, $inc: { exits: 1 } }, { new: true });
+      if (ticket) result = 'exit_ok';
+      else {
+        ticket = await Ticket.findOne(byCode);
+        if (!ticket) result = 'invalid';
+        else if (ticket.status === 'cancelled') result = 'cancelled';
+        else if (ticket.status === 'valid') result = 'not_entered';
+        else result = 'already_out';
+      }
     }
 
     const counts = await checkinCounts(ev._id);
     res.json({
       result,
+      mode,
       ticket: ticket ? {
         number: ticket.number,
         holderName: ticket.holderName,
         categoryCode: ticket.categoryCode,
         categoryName: ticket.categoryName,
         checkedInAt: ticket.checkedInAt,
+        outAt: ticket.outAt,
+        reentries: ticket.reentries || 0,
       } : null,
       ...counts,
     });
@@ -507,6 +534,8 @@ async function participantRows(ev, { withCodes = false } = {}) {
         categoryName: t.categoryName,
         status: t.status,
         checkedInAt: t.checkedInAt || null,
+        outAt: t.outAt || null,
+        reentries: t.reentries || 0,
         orderNumber: o.orderNumber,
         buyerName: o.buyer?.name || '',
         buyerPhone: o.buyer?.phone || '',

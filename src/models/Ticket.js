@@ -13,6 +13,11 @@ const ticketSchema = new mongoose.Schema({
   status: { type: String, enum: ['valid', 'used', 'cancelled'], default: 'valid', index: true },
   checkedInAt: Date,
   checkedInBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  // Sorties et retours : outAt est rempli quand la personne sort (scan en mode Sortie)
+  outAt: { type: Date, default: null },
+  exits: { type: Number, default: 0 },
+  reentries: { type: Number, default: 0 },
+  lastReentryAt: Date,
 }, { timestamps: true });
 
 module.exports = mongoose.model('Ticket', ticketSchema);
