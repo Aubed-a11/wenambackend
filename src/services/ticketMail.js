@@ -86,7 +86,7 @@ function layout(inner, m) {
   return `
   <div style="font-family:Lato,Arial,sans-serif;max-width:560px;margin:0 auto;background:#FAF3E8;border-radius:16px;overflow:hidden;color:#1A0F00">
     <div style="background:#1E120A;padding:30px 32px;text-align:center;border-bottom:4px solid #C98A35">
-      <img src="cid:${LOGO_CID}" alt="MIAWÉZON by Wênam" width="190" style="display:block;margin:0 auto;max-width:80%;height:auto;border:0" />
+      <img src="cid:${LOGO_CID}" alt="MIAWÉZON" width="260" style="display:block;margin:0 auto;max-width:80%;height:auto;border:0" />
     </div>
     <div style="padding:32px">${inner}</div>
     <div style="background:#1E120A;padding:16px 32px;text-align:center;font-size:12px;color:#E8D3B0">
