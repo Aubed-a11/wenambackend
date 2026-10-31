@@ -117,13 +117,13 @@ async function sendTicketsEmail({ order, tickets, event, token }) {
     </tr>`).join('');
 
   const html = layout(`
-    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${m.welcomeTitle}</p>
+    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#3B2410;margin:0 0 14px">${m.welcomeTitle}</p>
     <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
     <p style="font-size:15px;line-height:1.6;margin:0 0 14px">${m.welcome}</p>
     <p style="font-size:15px;line-height:1.6;margin:0 0 24px">${m.thanks}</p>
     <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#8B6B3D;margin:0 0 6px">${m.summary} · ${esc(order.orderNumber)}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">${lines}
-      <tr><td style="padding:10px 0;font-weight:700">${m.total}</td><td style="padding:10px 0;text-align:right;font-weight:700;color:#C4531A">${fmtPrice(order.total)}</td></tr>
+      <tr><td style="padding:10px 0;font-weight:700">${m.total}</td><td style="padding:10px 0;text-align:right;font-weight:700;color:#946420">${fmtPrice(order.total)}</td></tr>
     </table>
     <table style="width:100%;font-size:13px;margin:20px 0;color:#5C3D11">
       <tr><td>${t.date}</td><td style="text-align:right">${esc(eventDateText(event, lang, t))}</td></tr>
@@ -131,7 +131,7 @@ async function sendTicketsEmail({ order, tickets, event, token }) {
       <tr><td>${t.time}</td><td style="text-align:right">${esc(labelOr(event.eventTimeLabel, lang, t.tbc))}</td></tr>
     </table>
     <p style="text-align:center;margin:28px 0">
-      <a href="${link}" style="display:inline-block;background:#C4531A;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${m.see}</a>
+      <a href="${link}" style="display:inline-block;background:#946420;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${m.see}</a>
     </p>
     <p style="font-size:13px;line-height:1.6;color:#8B6B3D;margin:0 0 20px">${m.keep}</p>
     <p style="font-size:14px;margin:0">${m.team}</p>
@@ -157,11 +157,11 @@ async function sendWaitlistEmail({ entry }) {
   if (!tr) return false;
   const m = M[entry.lang === 'en' ? 'en' : 'fr'];
   const html = layout(`
-    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${m.waitTitle}</p>
+    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#3B2410;margin:0 0 14px">${m.waitTitle}</p>
     <p style="font-size:16px;margin:0 0 12px">${m.hello}${entry.name ? ` <strong>${esc(entry.name)}</strong>` : ''},</p>
     <p style="font-size:15px;line-height:1.6;margin:0 0 24px">${m.waitBody}</p>
     <p style="text-align:center;margin:28px 0">
-      <a href="${frontUrl()}/miawezon#billetterie" style="display:inline-block;background:#C4531A;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${m.waitCta}</a>
+      <a href="${frontUrl()}/miawezon#billetterie" style="display:inline-block;background:#946420;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${m.waitCta}</a>
     </p>
     <p style="font-size:14px;margin:0">${m.team}</p>
   `, m);
@@ -229,7 +229,7 @@ function accountsHtml(accounts, v) {
   if (!accounts.length) return `<p style="font-size:14px;color:#8B6B3D">${v.noAccount}</p>`;
   return accounts.map((b) => `
     <div style="background:#fff;border:1px solid #E4D3B5;border-radius:12px;padding:14px 16px;margin:0 0 10px">
-      ${b.bank ? `<p style="margin:0 0 6px;font-weight:700;color:#8B3A0F">${esc(b.bank)}</p>` : ''}
+      ${b.bank ? `<p style="margin:0 0 6px;font-weight:700;color:#3B2410">${esc(b.bank)}</p>` : ''}
       ${b.holder ? `<p style="margin:0;font-size:13px;color:#5C3D11">${v.holder} : <strong>${esc(b.holder)}</strong></p>` : ''}
       ${b.rib ? `<p style="margin:4px 0 0;font-size:13px;color:#5C3D11">${v.rib} : <strong style="font-family:Consolas,monospace;letter-spacing:1px">${esc(b.rib)}</strong></p>` : ''}
       ${b.iban ? `<p style="margin:4px 0 0;font-size:13px;color:#5C3D11">${v.iban} : <strong style="font-family:Consolas,monospace">${esc(b.iban)}</strong></p>` : ''}
@@ -258,18 +258,18 @@ async function sendTransferInstructions({ order, event, token }) {
   const m = M[lang]; const v = V[lang];
   const accounts = (event.bankAccounts || []).filter((b) => b && (b.rib || b.iban));
   const inner = `
-    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${v.instrTitle}</p>
+    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#3B2410;margin:0 0 14px">${v.instrTitle}</p>
     <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
     <p style="font-size:15px;line-height:1.6;margin:0 0 20px">${v.instrIntro}</p>
     <table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 18px">
-      <tr><td style="padding:6px 0;color:#5C3D11">${v.amount}</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#C4531A;font-size:18px">${fmtPrice(order.total)}</td></tr>
+      <tr><td style="padding:6px 0;color:#5C3D11">${v.amount}</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#946420;font-size:18px">${fmtPrice(order.total)}</td></tr>
       <tr><td style="padding:6px 0;color:#5C3D11">${v.motive}</td><td style="padding:6px 0;text-align:right;font-weight:700;font-family:Consolas,monospace">${esc(order.orderNumber)}</td></tr>
     </table>
     <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#8B6B3D;margin:0 0 8px">${v.accounts}</p>
     ${accountsHtml(accounts, v)}
     <p style="font-size:13px;line-height:1.6;color:#8B6B3D;margin:16px 0 0">${v.deadline(fmtDateTime(order.expiresAt, lang))}</p>
     <p style="text-align:center;margin:26px 0">
-      <a href="${resumeLink(order, token)}" style="display:inline-block;background:#C4531A;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${v.upload}</a>
+      <a href="${resumeLink(order, token)}" style="display:inline-block;background:#946420;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${v.upload}</a>
     </p>
     <p style="font-size:14px;margin:0">${m.team}</p>`;
   return send(order.buyer.email, v.instrSubject(order.orderNumber), inner, m);
@@ -280,7 +280,7 @@ async function sendProofReceived({ order, event }) {
   const lang = order.lang === 'en' ? 'en' : 'fr';
   const m = M[lang]; const v = V[lang];
   const inner = `
-    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${v.ackTitle}</p>
+    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#3B2410;margin:0 0 14px">${v.ackTitle}</p>
     <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
     <p style="font-size:15px;line-height:1.6;margin:0 0 20px">${v.ack(event.validationHours || 24)}</p>
     <p style="font-size:13px;color:#8B6B3D;margin:0 0 20px">${v.motive} : <strong>${esc(order.orderNumber)}</strong> · ${fmtPrice(order.total)}</p>
@@ -293,7 +293,7 @@ async function sendRejected({ order, reason }) {
   const lang = order.lang === 'en' ? 'en' : 'fr';
   const m = M[lang]; const v = V[lang];
   const inner = `
-    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${v.rejTitle}</p>
+    <p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#3B2410;margin:0 0 14px">${v.rejTitle}</p>
     <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
     <p style="font-size:15px;line-height:1.6;margin:0 0 14px">${v.rej}</p>
     ${reason ? `<p style="font-size:14px;line-height:1.6;margin:0 0 14px;background:#fff;border:1px solid #E4D3B5;border-radius:10px;padding:12px 14px"><strong>${v.reason} :</strong> ${esc(reason)}</p>` : ''}
@@ -307,17 +307,17 @@ async function sendAdminProofNotice({ order, proofPath, proofName, proofMime }) 
   const to = process.env.MIAWEZON_ADMIN_EMAIL || fromEmail();
   const m = M.fr;
   const inner = `
-    <p style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#8B3A0F;margin:0 0 14px">Nouveau reçu de virement à valider</p>
+    <p style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#3B2410;margin:0 0 14px">Nouveau reçu de virement à valider</p>
     <table style="width:100%;font-size:14px;border-collapse:collapse">
       <tr><td style="padding:4px 0;color:#5C3D11">Commande</td><td style="text-align:right;font-weight:700">${esc(order.orderNumber)}</td></tr>
       <tr><td style="padding:4px 0;color:#5C3D11">Client</td><td style="text-align:right">${esc(order.buyer.name)}</td></tr>
       <tr><td style="padding:4px 0;color:#5C3D11">Téléphone</td><td style="text-align:right">${esc(order.buyer.phone)}</td></tr>
       <tr><td style="padding:4px 0;color:#5C3D11">Billets</td><td style="text-align:right">${order.items.map((i) => `${esc(i.code)} x${i.quantity}`).join(', ')}</td></tr>
-      <tr><td style="padding:4px 0;color:#5C3D11">Montant attendu</td><td style="text-align:right;font-weight:700;color:#C4531A">${fmtPrice(order.total)}</td></tr>
+      <tr><td style="padding:4px 0;color:#5C3D11">Montant attendu</td><td style="text-align:right;font-weight:700;color:#946420">${fmtPrice(order.total)}</td></tr>
     </table>
     <p style="font-size:14px;line-height:1.6;margin:18px 0">Le reçu est joint à ce courriel. Validez ou refusez l'achat depuis le tableau de bord, sous 24 heures.</p>
     <p style="text-align:center;margin:22px 0">
-      <a href="${frontUrl()}/admin/miawezon?commande=${order._id}" style="display:inline-block;background:#C4531A;color:#fff;padding:12px 26px;border-radius:10px;text-decoration:none;font-weight:700">Ouvrir le tableau de bord</a>
+      <a href="${frontUrl()}/admin/miawezon?commande=${order._id}" style="display:inline-block;background:#946420;color:#fff;padding:12px 26px;border-radius:10px;text-decoration:none;font-weight:700">Ouvrir le tableau de bord</a>
     </p>`;
   const extra = proofPath ? [{ filename: proofName || 'recu', path: proofPath, contentType: proofMime }] : [];
   return send(to, `Reçu à valider : ${order.orderNumber} (${order.buyer.name})`, inner, m, extra);
@@ -362,8 +362,8 @@ const R = {
   },
 };
 
-const btn = (href, label) => `<p style="text-align:center;margin:26px 0"><a href="${href}" style="display:inline-block;background:#C4531A;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${label}</a></p>`;
-const title = (txt) => `<p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#8B3A0F;margin:0 0 14px">${txt}</p>`;
+const btn = (href, label) => `<p style="text-align:center;margin:26px 0"><a href="${href}" style="display:inline-block;background:#946420;color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700">${label}</a></p>`;
+const title = (txt) => `<p style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:#3B2410;margin:0 0 14px">${txt}</p>`;
 
 // Rappel au client : reçu non envoye, reservation bientot expiree
 async function sendHoldReminder({ order, event, token }) {
@@ -375,7 +375,7 @@ async function sendHoldReminder({ order, event, token }) {
     <p style="font-size:16px;margin:0 0 12px">${m.hello} <strong>${esc(order.buyer.name)}</strong>,</p>
     <p style="font-size:15px;line-height:1.6;margin:0 0 14px">${r.hold(fmtDateTime(order.expiresAt, lang))}</p>
     <table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 18px">
-      <tr><td style="padding:6px 0;color:#5C3D11">${v.amount}</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#C4531A;font-size:18px">${fmtPrice(order.total)}</td></tr>
+      <tr><td style="padding:6px 0;color:#5C3D11">${v.amount}</td><td style="padding:6px 0;text-align:right;font-weight:700;color:#946420;font-size:18px">${fmtPrice(order.total)}</td></tr>
       <tr><td style="padding:6px 0;color:#5C3D11">${v.motive}</td><td style="padding:6px 0;text-align:right;font-weight:700;font-family:Consolas,monospace">${esc(order.orderNumber)}</td></tr>
     </table>
     <p style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:#8B6B3D;margin:0 0 8px">${v.accounts}</p>
@@ -428,7 +428,7 @@ async function sendAdminPendingDigest({ orders, hours }) {
   const to = process.env.MIAWEZON_ADMIN_EMAIL || fromEmail();
   const rows = orders.map((o) => `
       <tr>
-        <td style="padding:6px 0;border-bottom:1px solid #EDE0C4"><a href="${frontUrl()}/admin/miawezon?commande=${o._id}" style="color:#8B3A0F;font-weight:700;text-decoration:none">${esc(o.orderNumber)}</a></td>
+        <td style="padding:6px 0;border-bottom:1px solid #EDE0C4"><a href="${frontUrl()}/admin/miawezon?commande=${o._id}" style="color:#3B2410;font-weight:700;text-decoration:none">${esc(o.orderNumber)}</a></td>
         <td style="padding:6px 0;border-bottom:1px solid #EDE0C4">${esc(o.buyer.name)}</td>
         <td style="padding:6px 0;border-bottom:1px solid #EDE0C4;text-align:right">${fmtPrice(o.total)}</td>
       </tr>`).join('');
