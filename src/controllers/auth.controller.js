@@ -1,18 +1,11 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { sendSiteMail } = require('../services/mailer');
 const User = require('../models/User');
 const { verifyCode } = require('../utils/emailVerification');
 
 const sendResetEmail = async (to, code) => {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-  await transporter.sendMail({
-    from: `"Wenam" <${process.env.FROM_EMAIL || process.env.SMTP_USER}>`,
+  await sendSiteMail({
     to,
     subject: 'Reinitialisation de votre mot de passe - Wenam',
     html: `

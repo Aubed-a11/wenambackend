@@ -1,5 +1,4 @@
 const { generateCode } = require('../utils/emailVerification');
-const nodemailer = require('nodemailer');
 
 const ALLOWED_DOMAINS = [
   // Google
@@ -37,12 +36,7 @@ const DISPOSABLE_DOMAINS = [
   'binkmail.com', 'clrmail.com', 'dispostable.com', 'mailnull.com',
 ];
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-});
+const { sendSiteMail } = require('../services/mailer');
 
 exports.sendVerificationCode = async (req, res) => {
   try {
@@ -65,8 +59,7 @@ exports.sendVerificationCode = async (req, res) => {
     }
 
     const code = generateCode(email);
-    await transporter.sendMail({
-      from: `"Wênam" <${process.env.FROM_EMAIL}>`,
+    await sendSiteMail({
       to: email,
       subject: 'Votre code de confirmation Wênam',
       html: `
