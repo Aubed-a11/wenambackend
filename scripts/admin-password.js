@@ -1,5 +1,5 @@
 // Change le mot de passe d'un compte admin.
-//   node scripts/admin-password.js "NouveauMotDePasse"                 -> compte admin@wenam.ma (ou ADMIN_EMAIL)
+//   node scripts/admin-password.js "NouveauMotDePasse"                 -> compte contact@wenamfood.com (ou ADMIN_EMAIL)
 //   node scripts/admin-password.js "NouveauMotDePasse" autre@email.com
 require('dotenv').config();
 const mongoose = require('mongoose');
@@ -11,7 +11,7 @@ const User = require('../src/models/User');
     console.log('Usage : node scripts/admin-password.js "MotDePasse" [email]  (10 caracteres minimum)');
     process.exit(1);
   }
-  const email = (emailArg || process.env.ADMIN_EMAIL || 'admin@wenam.ma').toLowerCase();
+  const email = (emailArg || process.env.ADMIN_EMAIL || 'contact@wenamfood.com').toLowerCase();
   await mongoose.connect(process.env.MONGODB_URI);
   const user = await User.findOne({ email }).select('+password');
   if (!user) { console.log(`Aucun compte ${email}`); process.exit(1); }

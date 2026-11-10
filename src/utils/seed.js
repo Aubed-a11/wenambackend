@@ -49,8 +49,9 @@ const menuData = [
 
 const seedAdmin = async () => {
   try {
-    const email = (process.env.ADMIN_EMAIL || 'admin@wenam.ma').toLowerCase()
-    const exists = await User.findOne({ email })
+    const email = (process.env.ADMIN_EMAIL || 'contact@wenamfood.com').toLowerCase()
+    // Un compte admin existe deja (quel que soit son e-mail) : on ne cree rien
+    const exists = await User.findOne({ $or: [{ email }, { role: 'admin' }] })
     if (!exists) {
       // Premier demarrage : mot de passe pris dans ADMIN_PASSWORD, sinon genere au hasard
       const password = process.env.ADMIN_PASSWORD || require('crypto').randomBytes(9).toString('base64url')
