@@ -83,7 +83,7 @@ function ticketFields({ ticket, order, event }) {
     venue: labelOr(event.venue, lang, t.tbc),
     number: ticket.number,
     holder: ticket.holderName,
-    purchase: order.orderNumber,
+    purchase: `ACHAT N° : ${order.orderNumber}`,
   };
 }
 
@@ -146,8 +146,14 @@ async function ticketsPdf({ order, tickets, event }) {
     const qr = await qrBuffer(tk);
     const q = L.qr;
     const pad = q.pad || 0;
-    if (q.bg) doc.roundedRect(q.x * s, q.y * s, q.size * s, q.size * s, (q.radius || 0) * s).fill(q.bg);
-    doc.image(qr, (q.x + pad) * s, (q.y + pad) * s, { width: (q.size - 2 * pad) * s, height: (q.size - 2 * pad) * s });
+    const qw = q.w || q.size;
+    const qh = q.h || q.size || qw;
+    if (q.bg) doc.roundedRect(q.x * s, q.y * s, qw * s, qh * s, (q.radius || 0) * s).fill(q.bg);
+    // QR carre centre dans la pastille (le modele a un emplacement non carre)
+    const side = Math.min(qw, qh) - 2 * pad;
+    const ix = q.x + (qw - side) / 2;
+    const iy = q.y + (qh - side) / 2;
+    doc.image(qr, ix * s, iy * s, { width: side * s, height: side * s });
     if (hasLogo && L.logo) {
       const g = L.logo;
       // Logo dore sur un badge sombre pour rester lisible sur le talon dore

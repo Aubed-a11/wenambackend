@@ -8,8 +8,8 @@ const SLUG = 'miawezon';
 const HOLD_MINUTES = Number(process.env.MIAWEZON_HOLD_MINUTES || 20);
 
 const DEFAULT_CATEGORIES = [
-  { code: 'ZINLI', name: 'ZINLI', label: { fr: 'Billet Basique', en: 'Basic ticket' }, price: 350, capacity: 50, order: 1 },
-  { code: 'AGBADJA', name: 'AGBADJA', label: { fr: 'Billet VIP', en: 'VIP ticket' }, price: 500, capacity: 20, order: 2 },
+  { code: 'ZINLI', name: 'MIAWÉZON Découverte', label: { fr: 'Formule Découverte', en: 'Découverte package' }, price: 350, capacity: 50, order: 1 },
+  { code: 'AGBADJA', name: 'MIAWÉZON Signature', label: { fr: 'Formule Signature', en: 'Signature package' }, price: 500, capacity: 20, order: 2 },
 ];
 
 // Menu par defaut (modifiable ensuite dans l'admin)
@@ -71,6 +71,9 @@ async function getEvent() {
   for (const [code, [oldPrice, price]] of Object.entries(OLD_PRICES)) {
     await TicketCategory.updateOne({ event: ev._id, code, price: oldPrice }, { $set: { price } });
   }
+  // Renommage des categories (ZINLI/AGBADJA -> MIAWÉZON Découverte/Signature)
+  await TicketCategory.updateOne({ event: ev._id, code: 'ZINLI', name: { $in: ['ZINLI', 'Billet Basique'] } }, { $set: { name: 'MIAWÉZON Découverte', label: { fr: 'Formule Découverte', en: 'Découverte package' } } });
+  await TicketCategory.updateOne({ event: ev._id, code: 'AGBADJA', name: { $in: ['AGBADJA', 'Billet VIP'] } }, { $set: { name: 'MIAWÉZON Signature', label: { fr: 'Formule Signature', en: 'Signature package' } } });
   const count = await TicketCategory.countDocuments({ event: ev._id });
   if (count === 0) {
     await TicketCategory.insertMany(DEFAULT_CATEGORIES.map((c) => ({ ...c, event: ev._id })), { ordered: false }).catch(() => {});

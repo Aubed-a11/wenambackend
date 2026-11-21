@@ -23,6 +23,7 @@ const FONTS = {
 };
 
 const TIERS = ['ZINLI', 'AGBADJA'];
+const TIER_SHORT = { ZINLI: 'Découverte', AGBADJA: 'Signature' };
 const SECTIONS = ['entrees', 'plats', 'desserts', 'boissons'];
 
 const M = {
@@ -92,7 +93,7 @@ function content(doc, { tier, cat, sections, lang, th, logo }, s, k, ox, oy, cw,
   y += lh + S.gLogo * s;
 
   y += text(m.menu.toUpperCase(), 'mz-700', S.label, th.muted, { sp: S.labelSp }) + S.gLabel * s;
-  y += text(tier, 'pf-700', S.tier, th.title, { sp: S.tierSp }) + S.gTier * s;
+  y += text(TIER_SHORT[tier] || tier, 'pf-700', S.tier, th.title, { sp: S.tierSp }) + S.gTier * s;
   if (cat) {
     const line = `${pick(cat.label, lang) || cat.name}  ·  ${fmtPrice(cat.price)} ${m.perPerson}`;
     y += text(line, 'mz-600', S.cat, th.text) + S.gCat * s;
@@ -140,7 +141,7 @@ function content(doc, { tier, cat, sections, lang, th, logo }, s, k, ox, oy, cw,
         if (desc) h += S.gName * s + t(desc, 'pf-i400', S.desc, th.muted);
         if (it.exclusive) {
           h += S.gDesc * s;
-          const label = m.exclusive(tier).toUpperCase();
+          const label = m.exclusive(TIER_SHORT[tier] || tier).toUpperCase();
           doc.font('mz-700').fontSize(px(S.badge * s));
           const tw = doc.widthOfString(label, { characterSpacing: px(S.badgeSp * s) }) / k;
           const bh = S.badge * s * 1.25 + S.badgePadY * s * 2;
