@@ -271,7 +271,7 @@ async function createOrder({ ev, items, buyer, holders, lang, userId }) {
 const ticketCode = () => crypto.randomBytes(9).toString('base64url').toUpperCase().replace(/[^A-Z0-9]/g, 'X');
 
 // Prefixe du numero de billet par categorie (ZN-000123, AG-000045)
-const NUMBER_PREFIX = { ZINLI: 'ZN', AGBADJA: 'AG' };
+const NUMBER_PREFIX = { ZINLI: 'MD', AGBADJA: 'MS' };
 const numberPrefix = (code) => NUMBER_PREFIX[code] || String(code || 'MZ').slice(0, 2).toUpperCase();
 
 // Emet les billets d'une commande payee (idempotent)
