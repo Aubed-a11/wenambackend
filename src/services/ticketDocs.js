@@ -10,6 +10,9 @@ const TPL_DIR = path.join(ASSETS, 'tickets');
 const LAYOUT = JSON.parse(fs.readFileSync(path.join(TPL_DIR, 'layout.json'), 'utf8'));
 // Logo MIAWEZON (version doree) pose dans la case logo du talon
 const LOGO = path.join(ASSETS, 'miawezon-logo-gold.png');
+// Logo MIAWEZON (version sombre) pose au centre du QR, sur une pastille blanche
+const LOGO_DARK = path.join(ASSETS, 'miawezon-logo-dark.png');
+const LOGO_RATIO = 4; // logo 1200 x 300
 const FONTS = {
   600: path.join(ASSETS, 'fonts/montserrat-latin-600-normal.woff'),
   700: path.join(ASSETS, 'fonts/montserrat-latin-700-normal.woff'),
@@ -31,8 +34,9 @@ function parseScanned(value) {
   return raw.trim().toUpperCase();
 }
 
-// QR noir sur blanc, pose sur une pastille blanche (marge de silence) pour etre lu par tous les telephones
-const QR_OPTS = { errorCorrectionLevel: 'M', margin: 0, color: { dark: '#000000', light: '#FFFFFF' } };
+// QR noir sur blanc, pose sur une pastille blanche (marge de silence) pour etre lu par tous les telephones.
+// Correction d'erreur elevee (H = 30%) : le logo pose au centre reste recuperable, le QR reste scannable.
+const QR_OPTS = { errorCorrectionLevel: 'H', margin: 0, color: { dark: '#000000', light: '#FFFFFF' } };
 const qrDataUrl = (ticket) => QRCode.toDataURL(qrPayload(ticket), { ...QR_OPTS, width: 360 });
 const qrBuffer = (ticket) => QRCode.toBuffer(qrPayload(ticket), { ...QR_OPTS, width: 480 });
 
@@ -164,6 +168,20 @@ async function ticketsPdf({ order, tickets, event }) {
     const ix = q.x + (qw - side) / 2;
     const iy = q.y + (qh - side) / 2;
     doc.image(qr, ix * s, iy * s, { width: side * s, height: side * s });
+    // Logo de l'evenement au centre du QR : pastille blanche + logo sombre (QR en correction H)
+    if (fs.existsSync(LOGO_DARK)) {
+      const lw = side * 0.34;              // largeur du logo (~34% du QR)
+      const lh = lw / LOGO_RATIO;          // hauteur (logo 4:1)
+      const mpad = side * 0.045;           // marge blanche autour du logo
+      const bw = lw + 2 * mpad;
+      const bh = lh + 2 * mpad;
+      const cx = ix + side / 2;
+      const cy = iy + side / 2;
+      doc.roundedRect((cx - bw / 2) * s, (cy - bh / 2) * s, bw * s, bh * s, 3 * s).fill('#FFFFFF');
+      try {
+        doc.image(LOGO_DARK, (cx - lw / 2) * s, (cy - lh / 2) * s, { width: lw * s, height: lh * s });
+      } catch { /* logo illisible */ }
+    }
     if (hasLogo && L.logo) {
       const g = L.logo;
       // Logo dore sur un badge sombre pour rester lisible sur le talon dore

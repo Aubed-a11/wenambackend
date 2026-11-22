@@ -5,17 +5,17 @@
     "image": "zinli.jpg",
     "fields": {
       "date": {
-        "x": 785,
+        "x": 748,
         "cy": 276,
-        "w": 205,
-        "size": 15,
+        "w": 220,
+        "size": 16,
         "weight": 800,
         "align": "left",
         "color": "#2A1606",
         "spacing": 0
       },
       "venue": {
-        "x": 785,
+        "x": 748,
         "cy": 334,
         "w": 215,
         "size": 18,
@@ -69,17 +69,17 @@
     "image": "agbadja.jpg",
     "fields": {
       "date": {
-        "x": 785,
+        "x": 748,
         "cy": 276,
-        "w": 205,
-        "size": 15,
+        "w": 220,
+        "size": 16,
         "weight": 800,
         "align": "left",
         "color": "#F2D79A",
         "spacing": 0
       },
       "venue": {
-        "x": 785,
+        "x": 748,
         "cy": 334,
         "w": 215,
         "size": 18,
