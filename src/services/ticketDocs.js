@@ -69,6 +69,16 @@ function ticketDateText(ev, lang, t) {
   return time ? `${date} · ${time}` : date;
 }
 
+// Date seule (sans l'heure) : plus lisible sur le billet, ou la place est reduite
+function ticketDateOnly(ev, lang, t) {
+  const label = labelOr(ev.eventDateLabel, lang, '');
+  if (label) return label;
+  if (ev.eventDate) {
+    return new Date(ev.eventDate).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Africa/Casablanca' });
+  }
+  return t.tbc;
+}
+
 const layoutFor = (code) => LAYOUT[code] || LAYOUT.ZINLI;
 
 // Contenu des champs d'un billet (partage avec la page web via orderPayload)
@@ -79,7 +89,7 @@ function ticketFields({ ticket, order, event }) {
   return {
     price: fmtPrice(unit),
     stubPrice: fmtPrice(unit),
-    date: ticketDateText(event, lang, t),
+    date: ticketDateOnly(event, lang, t),
     venue: labelOr(event.venue, lang, t.tbc),
     number: ticket.number,
     holder: ticket.holderName,
