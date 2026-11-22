@@ -5,20 +5,20 @@
     "image": "zinli.jpg",
     "fields": {
       "date": {
-        "x": 806,
-        "cy": 272,
-        "w": 268,
-        "size": 19,
+        "x": 785,
+        "cy": 276,
+        "w": 205,
+        "size": 15,
         "weight": 800,
         "align": "left",
         "color": "#2A1606",
         "spacing": 0
       },
       "venue": {
-        "x": 806,
-        "cy": 332,
-        "w": 268,
-        "size": 23,
+        "x": 785,
+        "cy": 334,
+        "w": 215,
+        "size": 18,
         "weight": 800,
         "align": "left",
         "color": "#2A1606"
@@ -55,10 +55,10 @@
     },
     "qr": {
       "x": 1186,
-      "y": 290,
+      "y": 289,
       "w": 148,
-      "h": 128,
-      "pad": 7,
+      "h": 112,
+      "pad": 6,
       "radius": 10,
       "bg": "#FFFFFF"
     }
@@ -69,20 +69,20 @@
     "image": "agbadja.jpg",
     "fields": {
       "date": {
-        "x": 806,
-        "cy": 272,
-        "w": 268,
-        "size": 19,
+        "x": 785,
+        "cy": 276,
+        "w": 205,
+        "size": 15,
         "weight": 800,
         "align": "left",
         "color": "#F2D79A",
         "spacing": 0
       },
       "venue": {
-        "x": 806,
-        "cy": 332,
-        "w": 268,
-        "size": 23,
+        "x": 785,
+        "cy": 334,
+        "w": 215,
+        "size": 18,
         "weight": 800,
         "align": "left",
         "color": "#F2D79A"
@@ -119,10 +119,10 @@
     },
     "qr": {
       "x": 1186,
-      "y": 290,
+      "y": 289,
       "w": 148,
-      "h": 128,
-      "pad": 7,
+      "h": 112,
+      "pad": 6,
       "radius": 10,
       "bg": "#FFFFFF"
     }
