@@ -1,50 +1,50 @@
 {
   "ZINLI": {
-    "width": 1600,
-    "height": 640,
+    "width": 1536,
+    "height": 502,
     "image": "zinli.jpg",
     "fields": {
       "date": {
-        "x": 915,
-        "cy": 312,
-        "w": 225,
-        "size": 27,
+        "x": 806,
+        "cy": 272,
+        "w": 244,
+        "size": 21,
         "weight": 700,
         "align": "left",
-        "color": "#F2D79A"
+        "color": "#2A1606"
       },
       "venue": {
-        "x": 915,
-        "cy": 360,
-        "w": 225,
-        "size": 27,
+        "x": 806,
+        "cy": 332,
+        "w": 244,
+        "size": 21,
         "weight": 700,
         "align": "left",
-        "color": "#F2D79A"
+        "color": "#2A1606"
       },
       "number": {
-        "x": 1248,
-        "cy": 222,
-        "w": 304,
-        "size": 31,
+        "x": 1222,
+        "cy": 171,
+        "w": 252,
+        "size": 30,
         "weight": 700,
         "align": "center",
         "color": "#2A1606",
         "spacing": 1
       },
       "holder": {
-        "x": 1248,
-        "cy": 315,
-        "w": 304,
-        "size": 27,
+        "x": 1203,
+        "cy": 254,
+        "w": 278,
+        "size": 26,
         "weight": 700,
         "align": "center",
         "color": "#2A1606"
       },
       "purchase": {
-        "x": 1232,
-        "cy": 583,
-        "w": 336,
+        "x": 1170,
+        "cy": 451,
+        "w": 330,
         "size": 15,
         "weight": 700,
         "align": "center",
@@ -53,61 +53,61 @@
       }
     },
     "qr": {
-      "x": 1228,
-      "y": 358,
-      "w": 184,
-      "h": 156,
-      "pad": 8,
-      "radius": 12,
+      "x": 1186,
+      "y": 290,
+      "w": 148,
+      "h": 128,
+      "pad": 7,
+      "radius": 10,
       "bg": "#FFFFFF"
     }
   },
   "AGBADJA": {
-    "width": 1600,
-    "height": 640,
+    "width": 1536,
+    "height": 514,
     "image": "agbadja.jpg",
     "fields": {
       "date": {
-        "x": 915,
-        "cy": 312,
-        "w": 225,
-        "size": 27,
+        "x": 806,
+        "cy": 272,
+        "w": 244,
+        "size": 21,
         "weight": 700,
         "align": "left",
         "color": "#F2D79A"
       },
       "venue": {
-        "x": 915,
-        "cy": 360,
-        "w": 225,
-        "size": 27,
+        "x": 806,
+        "cy": 332,
+        "w": 244,
+        "size": 21,
         "weight": 700,
         "align": "left",
         "color": "#F2D79A"
       },
       "number": {
-        "x": 1248,
-        "cy": 230,
-        "w": 304,
-        "size": 31,
+        "x": 1222,
+        "cy": 171,
+        "w": 252,
+        "size": 30,
         "weight": 700,
         "align": "center",
         "color": "#2A1606",
         "spacing": 1
       },
       "holder": {
-        "x": 1248,
-        "cy": 323,
-        "w": 304,
-        "size": 27,
+        "x": 1203,
+        "cy": 254,
+        "w": 278,
+        "size": 26,
         "weight": 700,
         "align": "center",
         "color": "#2A1606"
       },
       "purchase": {
-        "x": 1232,
-        "cy": 588,
-        "w": 336,
+        "x": 1170,
+        "cy": 451,
+        "w": 330,
         "size": 15,
         "weight": 700,
         "align": "center",
@@ -116,12 +116,12 @@
       }
     },
     "qr": {
-      "x": 1216,
-      "y": 376,
-      "w": 184,
-      "h": 152,
-      "pad": 8,
-      "radius": 12,
+      "x": 1186,
+      "y": 290,
+      "w": 148,
+      "h": 128,
+      "pad": 7,
+      "radius": 10,
       "bg": "#FFFFFF"
     }
   }
