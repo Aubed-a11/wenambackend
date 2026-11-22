@@ -89,7 +89,7 @@ function ticketFields({ ticket, order, event }) {
   return {
     price: fmtPrice(unit),
     stubPrice: fmtPrice(unit),
-    date: ticketDateOnly(event, lang, t),
+    date: ticketDateText(event, lang, t),
     venue: labelOr(event.venue, lang, t.tbc),
     number: ticket.number,
     holder: ticket.holderName,

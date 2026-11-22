@@ -7,18 +7,19 @@
       "date": {
         "x": 806,
         "cy": 272,
-        "w": 244,
-        "size": 21,
-        "weight": 700,
+        "w": 268,
+        "size": 19,
+        "weight": 800,
         "align": "left",
-        "color": "#2A1606"
+        "color": "#2A1606",
+        "spacing": 0
       },
       "venue": {
         "x": 806,
         "cy": 332,
-        "w": 244,
-        "size": 21,
-        "weight": 700,
+        "w": 268,
+        "size": 23,
+        "weight": 800,
         "align": "left",
         "color": "#2A1606"
       },
@@ -70,18 +71,19 @@
       "date": {
         "x": 806,
         "cy": 272,
-        "w": 244,
-        "size": 21,
-        "weight": 700,
+        "w": 268,
+        "size": 19,
+        "weight": 800,
         "align": "left",
-        "color": "#F2D79A"
+        "color": "#F2D79A",
+        "spacing": 0
       },
       "venue": {
         "x": 806,
         "cy": 332,
-        "w": 244,
-        "size": 21,
-        "weight": 700,
+        "w": 268,
+        "size": 23,
+        "weight": 800,
         "align": "left",
         "color": "#F2D79A"
       },
